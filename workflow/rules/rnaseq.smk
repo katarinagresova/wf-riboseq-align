@@ -31,6 +31,7 @@ rule star_transcript_rnaseq:
     output:
         bam=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam",
         bai=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai",
+        unsorted_bam=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam",
     params:
         prefix=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_",
     conda:
@@ -53,15 +54,14 @@ rule star_transcript_rnaseq:
             --readFilesIn {input.fastq1} {input.fastq2} \
             --readFilesCommand zcat
 
-        samtools sort -@ {threads} {params.prefix}Aligned.out.bam -o {output.bam}
-        rm {params.prefix}Aligned.out.bam
+        samtools sort -@ {threads} {output.unsorted_bam} -o {output.bam}
         samtools index {output.bam}
         """
 
 
 rule salmon_bam:
     input:
-        bam=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam",
+        bam=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam",
         fasta=config["human_transcriptome_fa"],
     output:
         f"{RESULTS_DIR}/salmon/{{sample}}/quant.sf",

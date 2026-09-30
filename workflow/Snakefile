@@ -38,3 +38,4 @@ rule all:
                species=["human", "spike_in"], sample=RIBO_SAMPLES),
         f"{RESULTS_DIR}/qc/summary.tsv",
         expand(f"{RESULTS_DIR}/salmon/{{sample}}/quant.sf", sample=RNA_SAMPLES),
+        expand(f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai", sample=RNA_SAMPLES),
