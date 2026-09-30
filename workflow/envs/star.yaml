@@ -1,0 +1,9 @@
+# STAR + samtools versions = the eIF pipeline's container
+name: star
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - star=2.7.10b
+  - samtools=1.17
+  - gzip=1.14

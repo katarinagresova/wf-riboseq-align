@@ -1,0 +1,8 @@
+name: python
+channels:
+  - conda-forge
+dependencies:
+  - python=3.14.7
+  - numpy=2.5.3
+  - pandas=3.0.6
+  - gzip=1.14

@@ -1,0 +1,6 @@
+# Local execution profile (single machine / interactive node).
+cores: 8
+use-conda: true
+printshellcmds: true
+rerun-incomplete: true
+keep-going: true

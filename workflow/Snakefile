@@ -1,0 +1,38 @@
+# Ribo-seq fastq -> transcriptome-aligned BAM, split into human / yeast spike-in,
+# plus matched total RNA-seq -> salmon quant. Runs standalone or as a module.
+
+import pandas as pd
+
+configfile: "config/config.yaml"
+
+RESULTS_DIR = config.get("RESULTS_DIR", "results")
+LOG_DIR = config.get("LOG_DIR", "logs")
+
+samples = pd.read_csv(config["samples"], dtype=str).set_index("sample_id", drop=False)
+RIBO_SAMPLES = list(samples.loc[samples["read_type"] == "ribo", "sample_id"])
+RNA_SAMPLES = list(samples.loc[samples["read_type"] == "rna", "sample_id"])
+
+MODE = config["mode"]
+if MODE == "filtered":
+    if not RNA_SAMPLES:
+        raise ValueError("mode 'filtered' builds the ribo reference from the RNA-seq, "
+                         "but samples.csv has no read_type=rna rows")
+    HUMAN_TRANSCRIPTOME_FA = f"{RESULTS_DIR}/reference/human_transcriptome.rnaseq_filtered.fa"
+elif MODE == "unfiltered":
+    HUMAN_TRANSCRIPTOME_FA = config["human_transcriptome_fa"]
+else:
+    raise ValueError(f"config 'mode' must be 'filtered' or 'unfiltered', got {MODE!r}")
+
+
+include: "rules/trim.smk"
+include: "rules/contaminants.smk"
+include: "rules/rnaseq.smk"
+include: "rules/autofilter.smk"
+include: "rules/align.smk"
+
+
+rule all:
+    input:
+        expand(f"{RESULTS_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",
+               species=["human", "yeast"], sample=RIBO_SAMPLES),
+        expand(f"{RESULTS_DIR}/salmon/{{sample}}/quant.sf", sample=RNA_SAMPLES),

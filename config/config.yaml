@@ -1,0 +1,34 @@
+# wf-riboseq-align configuration. Paths are relative to where snakemake runs
+# (the repo root when standalone, the importing repo's root when used as a module).
+
+samples: "config/samples.csv"
+RESULTS_DIR: "results"
+LOG_DIR: "logs"
+
+# Which human transcriptome the Ribo-seq reads are mapped to (the yeast
+# spike-in transcriptome is always appended):
+#   filtered   - drop transcripts the matched RNA-seq does not express (see
+#                `autofilter`), per run. The eIF depletion pipeline. Needs
+#                read_type=rna rows in samples.csv.
+#   unfiltered - human_transcriptome_fa as is. The eIF harringtonine pipeline.
+mode: "filtered"
+
+# Ribo-seq adapter trimming (cutadapt_reads)
+adapter: "TGGAATTCTCGGGTGCCAAGG"
+minlength: 18
+maxlength: 100
+qualcutoff: 20
+
+# rRNA / tRNA / snRNA ... reads matching these are discarded (number_contaminants)
+contaminants_fa: "/path/to/contaminants.fa"
+
+# Transcriptomes. Every read type maps to these, never to a genome.
+human_transcriptome_fa: "/path/to/human_transcriptome.fa"
+human_transcriptome_gtf: "/path/to/human_transcriptome.gtf"
+yeast_transcriptome_fa: "/path/to/yeast_transcriptome.fa"
+
+# mode "filtered" only: keep a transcript if TPM >= min_tpm in >= min_samples
+# RNA-seq libraries (filter_rnaseq)
+autofilter:
+  min_tpm: 0.01
+  min_samples: 2

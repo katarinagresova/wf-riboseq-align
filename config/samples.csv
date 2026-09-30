@@ -1,0 +1,5 @@
+sample_id,read_type,fastq_1,fastq_2
+ribo_sample1,ribo,/path/to/data/riboseq/ribo_sample1_R1.fastq.gz,
+ribo_sample2,ribo,/path/to/data/riboseq/ribo_sample2_R1.fastq.gz,
+rna_sample1,rna,/path/to/data/rnaseq/rna_sample1_R1.fastq.gz,/path/to/data/rnaseq/rna_sample1_R2.fastq.gz
+rna_sample2,rna,/path/to/data/rnaseq/rna_sample2_R1.fastq.gz,/path/to/data/rnaseq/rna_sample2_R2.fastq.gz
