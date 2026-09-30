@@ -1,24 +1,24 @@
-# Ribo-seq: map contaminant-free reads to human + yeast transcriptome, then
+# Ribo-seq: map contaminant-free reads to human + spike-in transcriptome, then
 # split the BAM by species. HUMAN_TRANSCRIPTOME_FA is the only thing `mode`
 # changes: the RNA-seq-filtered fasta, or the configured one as is.
 
 
-# Yeast goes LAST: split_bed_transcriptome relies on that order.
+# Spike-in goes LAST: split_bed_transcriptome relies on that order.
 rule combined_transcriptome:
     input:
         human=HUMAN_TRANSCRIPTOME_FA,
-        yeast=config["yeast_transcriptome_fa"],
+        spike_in=config["spike_in_transcriptome_fa"],
     output:
-        f"{RESULTS_DIR}/reference/transcriptome.combined_human_yeast.fa",
+        f"{RESULTS_DIR}/reference/transcriptome.combined_human_spike_in.fa",
     conda:
         "../envs/coreutils.yaml"
     shell:
-        "cat {input.human} {input.yeast} > {output}"
+        "cat {input.human} {input.spike_in} > {output}"
 
 
 rule star_transcript_index:
     input:
-        f"{RESULTS_DIR}/reference/transcriptome.combined_human_yeast.fa",
+        f"{RESULTS_DIR}/reference/transcriptome.combined_human_spike_in.fa",
     output:
         index=directory(f"{RESULTS_DIR}/star_index/transcriptome"),
         chrom_sizes=f"{RESULTS_DIR}/star_index/transcriptome/chrNameLength.txt",
@@ -75,23 +75,23 @@ rule split_bed_transcriptome:
     input:
         chrom_sizes=f"{RESULTS_DIR}/star_index/transcriptome/chrNameLength.txt",
         human_fa=HUMAN_TRANSCRIPTOME_FA,
-        yeast_fa=config["yeast_transcriptome_fa"],
+        spike_in_fa=config["spike_in_transcriptome_fa"],
     output:
         human=f"{RESULTS_DIR}/reference/transcripts.human.bed",
-        yeast=f"{RESULTS_DIR}/reference/transcripts.yeast.bed",
+        spike_in=f"{RESULTS_DIR}/reference/transcripts.spike_in.bed",
     conda:
         "../envs/coreutils.yaml"
     shell:
         r"""
         human_n=$(grep -c '^>' {input.human_fa})
-        yeast_n=$(grep -c '^>' {input.yeast_fa})
+        spike_in_n=$(grep -c '^>' {input.spike_in_fa})
         total_n=$(wc -l < {input.chrom_sizes})
-        if [ $((human_n + yeast_n)) -ne "$total_n" ]; then
-            echo "index has $total_n refs, fastas have $human_n human + $yeast_n yeast" >&2
+        if [ $((human_n + spike_in_n)) -ne "$total_n" ]; then
+            echo "index has $total_n refs, fastas have $human_n human + $spike_in_n spike-in" >&2
             exit 1
         fi
         awk -v OFS='\t' -v n="$human_n" 'NR <= n {{print $1, 0, $2}}' {input.chrom_sizes} > {output.human}
-        awk -v OFS='\t' -v n="$human_n" 'NR > n {{print $1, 0, $2}}' {input.chrom_sizes} > {output.yeast}
+        awk -v OFS='\t' -v n="$human_n" 'NR > n {{print $1, 0, $2}}' {input.chrom_sizes} > {output.spike_in}
         """
 
 
@@ -103,7 +103,7 @@ rule split_bam_transcriptome:
         bam=f"{RESULTS_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam",
         bai=f"{RESULTS_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",
     wildcard_constraints:
-        species="human|yeast",
+        species="human|spike_in",
     conda:
         "../envs/star.yaml"
     shell:

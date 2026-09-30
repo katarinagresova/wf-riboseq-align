@@ -5,8 +5,8 @@ samples: "config/samples.csv"
 RESULTS_DIR: "results"
 LOG_DIR: "logs"
 
-# Which human transcriptome the Ribo-seq reads are mapped to (the yeast
-# spike-in transcriptome is always appended):
+# Which human transcriptome the Ribo-seq reads are mapped to (the spike-in
+# transcriptome is always appended):
 #   filtered   - drop transcripts the matched RNA-seq does not express (see
 #                `autofilter`), per run. The eIF depletion pipeline. Needs
 #                read_type=rna rows in samples.csv.
@@ -25,7 +25,7 @@ contaminants_fa: "/path/to/contaminants.fa"
 # Transcriptomes. Every read type maps to these, never to a genome.
 human_transcriptome_fa: "/path/to/human_transcriptome.fa"
 human_transcriptome_gtf: "/path/to/human_transcriptome.gtf"
-yeast_transcriptome_fa: "/path/to/yeast_transcriptome.fa"
+spike_in_transcriptome_fa: "/path/to/yeast_transcriptome.fa"
 
 # mode "filtered" only: keep a transcript if TPM >= min_tpm in >= min_samples
 # RNA-seq libraries (filter_rnaseq)

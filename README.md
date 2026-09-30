@@ -1,7 +1,7 @@
 # wf-riboseq-align
 
 A Snakemake workflow that takes raw Ribo-seq fastq files to **transcriptome-aligned BAM files**, split into the human
-reads and the yeast spike-in reads. It also quantifies the matched total RNA-seq with salmon. It is a generalised,
+reads and the spike-in reads. It also quantifies the matched total RNA-seq with salmon. It is a generalised,
 reproducible version of the alignment part of the eIF project pipeline (Gabriel Villamil, Frederick Korbel). It can be
 run on its own or imported into another Snakemake workflow.
 
@@ -14,8 +14,8 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
    duplicates collapse but distinct molecules stay distinct
 3. `trim_reads`: strip the randomers and append them to the read name
 4. `star_contaminant`: discard reads that map to rRNA / tRNA / other contaminants
-5. `star_transcript`: map to the human + yeast transcriptome (multimappers kept, up to 255 loci)
-6. `split_bam_transcriptome`: split into `human/` and `yeast/` BAM files, sorted and indexed
+5. `star_transcript`: map to the human + spike-in transcriptome (multimappers kept, up to 255 loci)
+6. `split_bam_transcriptome`: split into `human/` and `spike_in/` BAM files, sorted and indexed
 
 Total RNA-seq (paired-end): map to the human transcriptome with STAR, then quantify with `salmon quant`.
 
@@ -28,7 +28,7 @@ The two eIF pipelines differ in a single step: which human transcriptome the Rib
 | `filtered` | Transcripts the matched RNA-seq expresses: TPM ≥ `min_tpm` in ≥ `min_samples` libraries. Filtered per run. | eIF depletion experiments |
 | `unfiltered` | `human_transcriptome_fa` as given | eIF harringtonine experiments |
 
-Both modes append the yeast transcriptome. For libraries without a spike-in this is harmless: the yeast BAM is
+Both modes append the spike-in transcriptome. For libraries without a spike-in this is harmless: the spike_in BAM is
 simply (nearly) empty. `filtered` needs `read_type=rna` rows in `samples.csv`.
 
 ## Inputs
@@ -43,20 +43,20 @@ simply (nearly) empty. `filtered` needs `read_type=rna` rows in `samples.csv`.
 | `fastq_2` | R2 fastq.gz for RNA-seq; empty for Ribo-seq |
 
 `config/config.yaml` contains `mode`, the cutadapt parameters, the contaminant fasta, the human transcriptome
-fasta + gtf, the yeast transcriptome fasta, and the `autofilter` thresholds. Every key is commented in the file.
+fasta + gtf, the spike-in transcriptome fasta, and the `autofilter` thresholds. Every key is commented in the file.
 Fill in the placeholder paths with your own data and references before running.
 
 ## Outputs (under `RESULTS_DIR`, default `results/`)
 
 ```
-split_bam/transcriptome/human/<sample>.bam(.bai)   Ribo-seq, human transcripts
-split_bam/transcriptome/yeast/<sample>.bam(.bai)   Ribo-seq, yeast spike-in
-salmon/<sample>/quant.sf                           RNA-seq quantification
-reference/                                          the references these were aligned to
-  transcriptome.combined_human_yeast.fa             (the BAM @SQ lines refer to this)
-  human_transcriptome.rnaseq_filtered.{fa,gtf}      (mode filtered)
-  rnaseq_filter_blacklist_txid.txt                  (mode filtered: the transcripts dropped)
-star/, filter_reads/, ...                           intermediates, incl. STAR Log.final.out
+split_bam/transcriptome/human/<sample>.bam(.bai)     Ribo-seq, human transcripts
+split_bam/transcriptome/spike_in/<sample>.bam(.bai)  Ribo-seq, spike-in reads
+salmon/<sample>/quant.sf                             RNA-seq quantification
+reference/                                           the references these were aligned to
+  transcriptome.combined_human_spike_in.fa           (the BAM @SQ lines refer to this)
+  human_transcriptome.rnaseq_filtered.{fa,gtf}       (mode filtered)
+  rnaseq_filter_blacklist_txid.txt                   (mode filtered: the transcripts dropped)
+star/, filter_reads/, ...                            intermediates, incl. STAR Log.final.out
 ```
 
 Per-step logs are written to `LOG_DIR` (default `logs/`). `logs/collapse_reads/` holds read counts, read-length
@@ -125,10 +125,10 @@ can then consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
 
 ## Differences from the eIF pipeline
 
-- **Yeast split in `unfiltered` mode.** The harringtonine pipeline built its Ribo-seq index from the human
+- **Spike-in split in `unfiltered` mode.** The harringtonine pipeline built its Ribo-seq index from the human
   transcriptome only. It then labelled the last 6,612 human transcripts as "yeast", so its `yeast/` BAM files hold
-  human reads and the spike-in was never aligned. Here the index is always human + yeast, and the split checks that
-  the index and fasta counts agree.
+  human reads and the spike-in was never aligned. Here the index is always human + spike-in, and the split checks
+  that the index and fasta counts agree.
 - **Exact transcript-id matching** when applying the blacklist. The original substring match would over-match
   versioned ids (`ENST…123.1` is contained in `ENST…123.10`). The output is identical on the HCT116 reference.
 - **Corrupt contaminant records.** `contaminants.combined_human_yeast.fa` contains stray text in two records (in

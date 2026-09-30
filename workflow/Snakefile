@@ -1,4 +1,4 @@
-# Ribo-seq fastq -> transcriptome-aligned BAM, split into human / yeast spike-in,
+# Ribo-seq fastq -> transcriptome-aligned BAM, split into human / spike-in,
 # plus matched total RNA-seq -> salmon quant. Runs standalone or as a module.
 
 import pandas as pd
@@ -34,5 +34,5 @@ include: "rules/align.smk"
 rule all:
     input:
         expand(f"{RESULTS_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",
-               species=["human", "yeast"], sample=RIBO_SAMPLES),
+               species=["human", "spike_in"], sample=RIBO_SAMPLES),
         expand(f"{RESULTS_DIR}/salmon/{{sample}}/quant.sf", sample=RNA_SAMPLES),
