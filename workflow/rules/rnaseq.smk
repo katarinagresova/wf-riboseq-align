@@ -31,7 +31,7 @@ rule star_transcript_rnaseq:
     output:
         bam=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam",
         bai=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai",
-        unsorted_bam=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam",
+        unsorted_bam=temp(f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam"),
     params:
         prefix=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_",
     conda:
