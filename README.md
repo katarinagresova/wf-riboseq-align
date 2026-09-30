@@ -21,7 +21,8 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
    all mapped). Reads aligned to both species stay in both BAM files and are only counted. The run fails if any
    library's spike-in fraction is below `min_spike_in_fraction` (default 0.01; set 0 for libraries without spike-in)
 
-Total RNA-seq (paired-end): map to the human transcriptome with STAR, then quantify with `salmon quant`.
+Total RNA-seq (paired-end): map to the human transcriptome with STAR, then quantify with `salmon quant`. salmon
+reads STAR's unsorted BAM (mates adjacent); the run fails if salmon reports any suspicious pair.
 
 ## The one choice: `mode`
 

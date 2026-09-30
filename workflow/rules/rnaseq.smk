@@ -73,5 +73,14 @@ rule salmon_bam:
         "../envs/salmon.yaml"
     threads: 4
     shell:
-        "salmon quant -p {threads} --seqBias -t {input.fasta} -l A -a {input.bam} "
-        "--output {params.out_dir} > {log} 2>&1"
+        r"""
+        salmon quant -p {threads} --seqBias -t {input.fasta} -l A -a {input.bam} \
+            --output {params.out_dir} > {log} 2>&1
+
+        # salmon only warns when mates are not adjacent in the BAM (e.g. a
+        # coordinate-sorted one), and then quantifies them wrongly
+        if grep -q "suspicious pair" {log}; then
+            echo "ERROR: salmon reported suspicious pairs (see {log}); mates must be adjacent in {input.bam}." >&2
+            exit 1
+        fi
+        """
