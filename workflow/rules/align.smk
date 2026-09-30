@@ -3,7 +3,6 @@
 # changes: the RNA-seq-filtered fasta, or the configured one as is.
 
 
-# Spike-in goes LAST: split_bed_transcriptome relies on that order.
 rule combined_transcriptome:
     input:
         human=HUMAN_TRANSCRIPTOME_FA,
@@ -79,20 +78,15 @@ rule split_bed_transcriptome:
     output:
         human=f"{RESULTS_DIR}/reference/transcripts.human.bed",
         spike_in=f"{RESULTS_DIR}/reference/transcripts.spike_in.bed",
+    params:
+        script=workflow.source_path("../scripts/split_bed_transcriptome.py"),
+    log:
+        f"{LOG_DIR}/align/split_bed_transcriptome.log",
     conda:
-        "../envs/coreutils.yaml"
+        "../envs/python.yaml"
     shell:
-        r"""
-        human_n=$(grep -c '^>' {input.human_fa})
-        spike_in_n=$(grep -c '^>' {input.spike_in_fa})
-        total_n=$(wc -l < {input.chrom_sizes})
-        if [ $((human_n + spike_in_n)) -ne "$total_n" ]; then
-            echo "index has $total_n refs, fastas have $human_n human + $spike_in_n spike-in" >&2
-            exit 1
-        fi
-        awk -v OFS='\t' -v n="$human_n" 'NR <= n {{print $1, 0, $2}}' {input.chrom_sizes} > {output.human}
-        awk -v OFS='\t' -v n="$human_n" 'NR > n {{print $1, 0, $2}}' {input.chrom_sizes} > {output.spike_in}
-        """
+        "python {params.script} {input.chrom_sizes} {input.human_fa} {input.spike_in_fa} "
+        "{output.human} {output.spike_in} 2> {log}"
 
 
 rule split_bam_transcriptome:
