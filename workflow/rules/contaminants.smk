@@ -2,6 +2,22 @@
 # keep what does NOT align.
 
 
+# Not part of the default targets: run explicitly (needs internet access) to
+# produce a contaminants_fa from public sources instead of a hand-maintained
+# file, then point `contaminants_fa` in config.yaml at the output.
+rule build_contaminants:
+    output:
+        f"{RESULTS_DIR}/reference/contaminants_built.fa",
+    params:
+        script=workflow.source_path("../scripts/build_contaminants.py"),
+    log:
+        f"{LOG_DIR}/build_contaminants.log",
+    conda:
+        "../envs/python.yaml"
+    shell:
+        "python {params.script} {output} 2> {log}"
+
+
 rule number_contaminants:
     input:
         config["contaminants_fa"],
