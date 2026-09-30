@@ -11,6 +11,9 @@ rule qc_library:
         spike_in=f"{RESULTS_DIR}/split_bam/transcriptome/spike_in/{{sample}}.bam",
     output:
         f"{RESULTS_DIR}/qc/{{sample}}.stats.tsv",
+    # sort spills here, not to the node's /tmp (filled up on compute nodes)
+    params:
+        tmp_dir=f"{RESULTS_DIR}/qc/{{sample}}_tmp_sort",
     conda:
         "../envs/star.yaml"
     shell:
@@ -21,9 +24,11 @@ rule qc_library:
         unique=$(star_stat "Uniquely mapped reads number")
         multi=$(star_stat "Number of reads mapped to multiple loci")
 
+        rm -rf {params.tmp_dir}
+        mkdir -p {params.tmp_dir}
         # comm columns: 1 = human only, 2 = spike-in only, 3 = both
-        comm <(samtools view {input.human} | cut -f1 | sort -u) \
-             <(samtools view {input.spike_in} | cut -f1 | sort -u) |
+        comm <(samtools view {input.human} | cut -f1 | sort -u -T {params.tmp_dir}) \
+             <(samtools view {input.spike_in} | cut -f1 | sort -u -T {params.tmp_dir}) |
         awk -F'\t' -v OFS='\t' -v sample={wildcards.sample} \
             -v input="$input" -v unique="$unique" -v multi="$multi" '
             $1 != "" {{ h++; next }}
@@ -36,6 +41,7 @@ rule qc_library:
                 print sample, input, unique, multi, input - unique - multi,
                       h + 0, s + 0, b + 0, (mapped ? s / mapped : 0)
             }}' > {output}
+        rm -rf {params.tmp_dir}
         """
 
 
