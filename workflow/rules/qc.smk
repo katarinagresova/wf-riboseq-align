@@ -26,9 +26,11 @@ rule qc_library:
 
         rm -rf {params.tmp_dir}
         mkdir -p {params.tmp_dir}
+        # to files, not comm <(...): bash ignores a failure inside <(...), e.g. a full disk
+        samtools view {input.human} | cut -f1 | sort -u -T {params.tmp_dir} > {params.tmp_dir}/human.txt
+        samtools view {input.spike_in} | cut -f1 | sort -u -T {params.tmp_dir} > {params.tmp_dir}/spike_in.txt
         # comm columns: 1 = human only, 2 = spike-in only, 3 = both
-        comm <(samtools view {input.human} | cut -f1 | sort -u -T {params.tmp_dir}) \
-             <(samtools view {input.spike_in} | cut -f1 | sort -u -T {params.tmp_dir}) |
+        comm {params.tmp_dir}/human.txt {params.tmp_dir}/spike_in.txt |
         awk -F'\t' -v OFS='\t' -v sample={wildcards.sample} \
             -v input="$input" -v unique="$unique" -v multi="$multi" '
             $1 != "" {{ h++; next }}
