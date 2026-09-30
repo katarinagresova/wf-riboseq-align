@@ -56,7 +56,8 @@ rule star_contaminant:
         fastq=f"{RESULTS_DIR}/trim_reads/{{sample}}.fastq.gz",
         index=f"{RESULTS_DIR}/star_index/contaminants",
     output:
-        f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
+        fastq=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
+        log_final=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
     params:
         prefix=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_",
         tmp_dir=f"{RESULTS_DIR}/filter_reads/{{sample}}/_tmpSTAR",
@@ -90,6 +91,6 @@ rule star_contaminant:
             exit 1
         fi
 
-        gzip -c {params.prefix}Unmapped.out.mate1 > {output}
+        gzip -c {params.prefix}Unmapped.out.mate1 > {output.fastq}
         rm -f {params.prefix}Unmapped.out.mate1 {params.prefix}Aligned.out.sam
         """

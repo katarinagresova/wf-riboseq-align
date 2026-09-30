@@ -27,6 +27,11 @@ human_transcriptome_fa: "/path/to/human_transcriptome.fa"
 human_transcriptome_gtf: "/path/to/human_transcriptome.gtf"
 spike_in_transcriptome_fa: "/path/to/yeast_transcriptome.fa"
 
+# qc_summary fails if any Ribo-seq library has a lower spike-in fraction
+# (spike-in-only reads / all mapped reads). Set 0 for libraries without a
+# spike-in (e.g. HarrPurr).
+min_spike_in_fraction: 0.01
+
 # mode "filtered" only: keep a transcript if TPM >= min_tpm in >= min_samples
 # RNA-seq libraries (filter_rnaseq)
 autofilter:

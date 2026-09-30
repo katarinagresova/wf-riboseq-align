@@ -16,6 +16,10 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
 4. `star_contaminant`: discard reads that map to rRNA / tRNA / other contaminants
 5. `star_transcript`: map to the human + spike-in transcriptome (multimappers kept, up to 255 loci)
 6. `split_bam_transcriptome`: split into `human/` and `spike_in/` BAM files, sorted and indexed
+7. `qc_library`, `qc_summary`: per-library read counts: contaminant step (input, removed as unique hits, removed as
+   multi-copy hits, clean) and species split (human only, spike-in only, both, spike-in fraction = spike-in-only /
+   all mapped). Reads aligned to both species stay in both BAM files and are only counted. The run fails if any
+   library's spike-in fraction is below `min_spike_in_fraction` (default 0.01; set 0 for libraries without spike-in)
 
 Total RNA-seq (paired-end): map to the human transcriptome with STAR, then quantify with `salmon quant`.
 
@@ -43,7 +47,7 @@ simply (nearly) empty. `filtered` needs `read_type=rna` rows in `samples.csv`.
 | `fastq_2` | R2 fastq.gz for RNA-seq; empty for Ribo-seq |
 
 `config/config.yaml` contains `mode`, the cutadapt parameters, the contaminant fasta, the human transcriptome
-fasta + gtf, the spike-in transcriptome fasta, and the `autofilter` thresholds. Every key is commented in the file.
+fasta + gtf, the spike-in transcriptome fasta, `min_spike_in_fraction`, and the `autofilter` thresholds. Every key is commented in the file.
 Fill in the placeholder paths with your own data and references before running.
 
 ## Outputs (under `RESULTS_DIR`, default `results/`)
@@ -52,6 +56,7 @@ Fill in the placeholder paths with your own data and references before running.
 split_bam/transcriptome/human/<sample>.bam(.bai)     Ribo-seq, human transcripts
 split_bam/transcriptome/spike_in/<sample>.bam(.bai)  Ribo-seq, spike-in reads
 salmon/<sample>/quant.sf                             RNA-seq quantification
+qc/<sample>.stats.tsv, qc/summary.tsv                Ribo-seq read counts per library (collapsed reads)
 reference/                                           the references these were aligned to
   transcriptome.combined_human_spike_in.fa           (the BAM @SQ lines refer to this)
   human_transcriptome.rnaseq_filtered.{fa,gtf}       (mode filtered)
@@ -148,7 +153,8 @@ can then consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
 - **Corrupt contaminant records.** `contaminants.combined_human_yeast.fa` contains stray text in two records (in
   MIR4500HG, and a yeast_HRA1 header fused into tRNA-iMet). The workflow drops the non-nucleotide characters, as R's
   Biostrings did silently, and writes a warning to `logs/number_contaminants.log`.
-- **Changed outputs.** The final BAM files are indexed. The contaminant-alignment BAM + stats step and everything
-  after the BAM (RiboStan, TPM tables) are not part of this workflow.
+- **Changed outputs.** The final BAM files are indexed, and `qc/` holds per-library read counts. The
+  contaminant-alignment BAM + stats step and everything after the BAM (RiboStan, TPM tables, size factors) are not
+  part of this workflow; normalisation stays downstream, as in the eIF pipeline.
 - **Deterministic collapsing.** Reads with equal counts are ordered by first appearance. The Perl version used hash
   order, which is random, so read names could differ between runs.

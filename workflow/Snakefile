@@ -29,10 +29,12 @@ include: "rules/contaminants.smk"
 include: "rules/rnaseq.smk"
 include: "rules/autofilter.smk"
 include: "rules/align.smk"
+include: "rules/qc.smk"
 
 
 rule all:
     input:
         expand(f"{RESULTS_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",
                species=["human", "spike_in"], sample=RIBO_SAMPLES),
+        f"{RESULTS_DIR}/qc/summary.tsv",
         expand(f"{RESULTS_DIR}/salmon/{{sample}}/quant.sf", sample=RNA_SAMPLES),
