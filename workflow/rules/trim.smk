@@ -31,29 +31,27 @@ rule cutadapt_reads:
 # so identical reads with different randomers stay distinct molecules.
 rule collapse_reads:
     input:
-        f"{RESULTS_DIR}/cutadapt_reads/{{sample}}.fastq.gz",
+        fastq=f"{RESULTS_DIR}/cutadapt_reads/{{sample}}.fastq.gz",
+        script=workflow.source_path("../scripts/collapse_reads.py"),
     output:
         f"{RESULTS_DIR}/collapse_reads/{{sample}}.fastq.gz",
     log:
         f"{LOG_DIR}/collapse_reads/{{sample}}.log",
-    params:
-        script=workflow.source_path("../scripts/collapse_reads.py"),
     conda:
         "../envs/python.yaml"
     shell:
-        "zcat {input} | python {params.script} {wildcards.sample} 2> {log} | gzip > {output}"
+        "zcat {input.fastq} | python {input.script} {wildcards.sample} 2> {log} | gzip > {output}"
 
 
 rule trim_reads:
     input:
-        f"{RESULTS_DIR}/collapse_reads/{{sample}}.fastq.gz",
+        fastq=f"{RESULTS_DIR}/collapse_reads/{{sample}}.fastq.gz",
+        script=workflow.source_path("../scripts/remove_randomers.py"),
     output:
         f"{RESULTS_DIR}/trim_reads/{{sample}}.fastq.gz",
     log:
         f"{LOG_DIR}/trim_reads/{{sample}}.log",
-    params:
-        script=workflow.source_path("../scripts/remove_randomers.py"),
     conda:
         "../envs/python.yaml"
     shell:
-        "zcat {input} | python {params.script} 2> {log} | gzip > {output}"
+        "zcat {input.fastq} | python {input.script} 2> {log} | gzip > {output}"

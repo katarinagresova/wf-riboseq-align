@@ -75,17 +75,16 @@ rule split_bed_transcriptome:
         chrom_sizes=f"{RESULTS_DIR}/star_index/transcriptome/chrNameLength.txt",
         human_fa=HUMAN_TRANSCRIPTOME_FA,
         spike_in_fa=config["spike_in_transcriptome_fa"],
+        script=workflow.source_path("../scripts/split_bed_transcriptome.py"),
     output:
         human=f"{RESULTS_DIR}/reference/transcripts.human.bed",
         spike_in=f"{RESULTS_DIR}/reference/transcripts.spike_in.bed",
-    params:
-        script=workflow.source_path("../scripts/split_bed_transcriptome.py"),
     log:
         f"{LOG_DIR}/align/split_bed_transcriptome.log",
     conda:
         "../envs/python.yaml"
     shell:
-        "python {params.script} {input.chrom_sizes} {input.human_fa} {input.spike_in_fa} "
+        "python {input.script} {input.chrom_sizes} {input.human_fa} {input.spike_in_fa} "
         "{output.human} {output.spike_in} 2> {log}"
 
 

@@ -41,15 +41,15 @@ rule qc_library:
 
 rule qc_summary:
     input:
-        expand(f"{RESULTS_DIR}/qc/{{sample}}.stats.tsv", sample=RIBO_SAMPLES),
+        tsvs=expand(f"{RESULTS_DIR}/qc/{{sample}}.stats.tsv", sample=RIBO_SAMPLES),
+        script=workflow.source_path("../scripts/qc_summary.py"),
     output:
         f"{RESULTS_DIR}/qc/summary.tsv",
     params:
-        script=workflow.source_path("../scripts/qc_summary.py"),
         min_spike_in_fraction=config.get("min_spike_in_fraction", 0.01),
     log:
         f"{LOG_DIR}/qc/qc_summary.log",
     conda:
         "../envs/python.yaml"
     shell:
-        "python {params.script} {output} {params.min_spike_in_fraction} {input} 2> {log}"
+        "python {input.script} {output} {params.min_spike_in_fraction} {input.tsvs} 2> {log}"

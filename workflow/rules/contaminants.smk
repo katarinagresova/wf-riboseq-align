@@ -6,31 +6,30 @@
 # produce a contaminants_fa from public sources instead of a hand-maintained
 # file, then point `contaminants_fa` in config.yaml at the output.
 rule build_contaminants:
+    input:
+        script=workflow.source_path("../scripts/build_contaminants.py"),
     output:
         f"{RESULTS_DIR}/reference/contaminants_built.fa",
-    params:
-        script=workflow.source_path("../scripts/build_contaminants.py"),
     log:
         f"{LOG_DIR}/build_contaminants.log",
     conda:
         "../envs/python.yaml"
     shell:
-        "python {params.script} {output} 2> {log}"
+        "python {input.script} {output} 2> {log}"
 
 
 rule number_contaminants:
     input:
-        config["contaminants_fa"],
+        fa=config["contaminants_fa"],
+        script=workflow.source_path("../scripts/number_contaminants.py"),
     output:
         f"{RESULTS_DIR}/reference/contaminants_numbered.fa",
-    params:
-        script=workflow.source_path("../scripts/number_contaminants.py"),
     log:
         f"{LOG_DIR}/number_contaminants.log",
     conda:
         "../envs/python.yaml"
     shell:
-        "python {params.script} {input} {output} 2> {log}"
+        "python {input.script} {input.fa} {output} 2> {log}"
 
 
 rule star_contaminant_index:
