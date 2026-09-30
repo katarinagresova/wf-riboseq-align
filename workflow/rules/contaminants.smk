@@ -72,7 +72,8 @@ rule star_contaminant:
             --readFilesCommand zcat \
             --outSAMunmapped Within \
             --outMultimapperOrder Random \
-            --outFilterMultimapNmax 1 \
+            --outFilterMultimapNmax 10000 \
+            --outSAMmultNmax 1 \
             --alignSJoverhangMin 8 \
             --alignSJDBoverhangMin 1 \
             --outTmpDir {params.tmp_dir} \
@@ -82,6 +83,12 @@ rule star_contaminant:
             --outFileNamePrefix {params.prefix} \
             --outReadsUnmapped Fastx \
             --readFilesIn {input.fastq}
+
+        too_many=$(grep "Number of reads mapped to too many loci" {params.prefix}Log.final.out | cut -f2)
+        if [ "$too_many" != "0" ]; then
+            echo "ERROR: $too_many reads exceeded --outFilterMultimapNmax 10000 in contaminant mapping; raise the limit." >&2
+            exit 1
+        fi
 
         gzip -c {params.prefix}Unmapped.out.mate1 > {output}
         rm -f {params.prefix}Unmapped.out.mate1 {params.prefix}Aligned.out.sam

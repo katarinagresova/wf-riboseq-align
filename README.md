@@ -125,6 +125,20 @@ can then consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
 
 ## Differences from the eIF pipeline
 
+- **Reads with any contaminant hit are removed.** The eIF pipeline ran the contaminant alignment with
+  `--outFilterMultimapNmax 1`. A read hitting more than one contaminant entry then counts as "mapped to too many
+  loci", ends up in the unmapped output and passes as clean: 2.26M reads in ribo_07, 34% of its "clean" fastq. Here
+  the limit is 10,000, and the rule stops with an error if STAR's `Log.final.out` reports any read mapped to too many
+  loci, so a larger copy number cannot leak silently. The limit is this high because a `build_contaminants` fasta
+  takes all of Ensembl ncRNA, which likely includes many near-identical snRNA, Y_RNA and 5S copies, and
+  `number_contaminants` only removes exact duplicates. `--winAnchorMultimapNmax` stays at its default of 50: raising
+  it to 10,000 as well caught only 0.3% more reads, but left 250–470k more reads per library unmapped (and so
+  "clean"), including 151k in ribo_07 that map uniquely at the default. Measured on the full eIF4E 4 h data: in
+  ribo_07 every other STAR category is identical to the eIF pipeline's, only the leaked reads move from "too many
+  loci" to "multiple loci", and the clean fastq drops from 6.58M to 4.32M reads. Across the six libraries, reads in
+  the human BAMs drop by 20–38% and in the spike-in BAMs by 55–76%. Every output from `filter_reads` onward
+  therefore differs from the eIF pipeline's; only the RNA-seq outputs are unchanged, because they skip the
+  contaminant step.
 - **Spike-in split in `unfiltered` mode.** The harringtonine pipeline built its Ribo-seq index from the human
   transcriptome only. It then labelled the last 6,612 human transcripts as "yeast", so its `yeast/` BAM files hold
   human reads and the spike-in was never aligned. Here the index is always human + spike-in, and the split checks
