@@ -23,6 +23,17 @@ elif MODE == "unfiltered":
 else:
     raise ValueError(f"config 'mode' must be 'filtered' or 'unfiltered', got {MODE!r}")
 
+# What star_transcript maps: star_contaminant's clean fastq, or with
+# contaminant_filter: competitive, that plus the reads contaminant_compete puts back.
+# config.get so older module config blocks load.
+CONTAMINANT_FILTER = config.get("contaminant_filter", "remove")
+if CONTAMINANT_FILTER == "remove":
+    CLEAN_FASTQ = f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz"
+elif CONTAMINANT_FILTER == "competitive":
+    CLEAN_FASTQ = f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.gz"
+else:
+    raise ValueError(f"config 'contaminant_filter' must be 'remove' or 'competitive', got {CONTAMINANT_FILTER!r}")
+
 
 include: "rules/trim.smk"
 include: "rules/contaminants.smk"

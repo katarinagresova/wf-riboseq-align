@@ -13,11 +13,15 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
 2. `collapse_reads`: collapse identical reads. The randomers are still part of the read at this point, so PCR
    duplicates collapse but distinct molecules stay distinct
 3. `trim_reads`: strip the randomers and append them to the read name
-4. `star_contaminant`: discard reads that map to rRNA / tRNA / other contaminants
+4. `star_contaminant`: discard reads that map to rRNA / tRNA / other contaminants. With `contaminant_filter:
+   competitive`, `contaminant_compete_align` + `contaminant_compete` then put back every discarded read whose best
+   sense alignment to the transcriptome (step 5's index and parameters) scores higher (STAR AS) than its contaminant
+   alignment. A tie stays discarded (see Differences below)
 5. `star_transcript`: map to the human + spike-in transcriptome (multimappers kept, up to 255 loci)
 6. `split_bam_transcriptome`: split into `human/` and `spike_in/` BAM files, sorted and indexed
 7. `qc_library`, `qc_summary`: per-library read counts: contaminant step (input, removed as unique hits, removed as
-   multi-copy hits, clean) and species split (human only, spike-in only, both, spike-in fraction = spike-in-only /
+   multi-copy hits, put back by the competitive filter, clean) and species split (human only, spike-in only, both,
+   spike-in fraction = spike-in-only /
    all mapped). Reads aligned to both species stay in both BAM files and are only counted. The run fails if any
    library's spike-in fraction is below `min_spike_in_fraction` (default 0.01; set 0 for libraries without spike-in)
 
@@ -52,7 +56,7 @@ simply (nearly) empty. `filtered` needs `read_type=rna` rows in `samples.csv`.
 | `fastq_1` | fastq.gz (R1 for RNA-seq) |
 | `fastq_2` | R2 fastq.gz for RNA-seq; empty for Ribo-seq |
 
-`config/config.yaml` contains `mode`, the cutadapt parameters, the contaminant fasta, the human transcriptome
+`config/config.yaml` contains `mode`, the cutadapt parameters, the contaminant fasta, `contaminant_filter`, the human transcriptome
 fasta + gtf, the spike-in transcriptome fasta, `min_spike_in_fraction`, and the `autofilter` thresholds. Every key is commented in the file.
 Fill in the placeholder paths with your own data and references before running.
 
@@ -152,6 +156,16 @@ can then consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
   the human BAMs drop by 20–38% and in the spike-in BAMs by 55–76%. Every output from `filter_reads` onward
   therefore differs from the eIF pipeline's; only the RNA-seq outputs are unchanged, because they skip the
   contaminant step.
+- **Optional competitive contaminant filter** (`contaminant_filter: competitive`; the default `remove` is the eIF
+  pipeline's behaviour). STAR's local mode removes a read as a contaminant when 66% of it matches, so short footprints
+  are lost on chance partial matches, and footprints inside an exon that also carries a contaminant record (miRNA
+  hairpins, 7SL-like copies) are lost entirely. The competitive filter puts a removed read back if its best sense
+  alignment to the transcriptome scores higher than its contaminant alignment. On eIF4E 4 h ribo_07 (Ensembl-built
+  contaminant set) it cuts the human CDS reads lost from 2.3% to 0.09% (20 nt: 18% to 0.2%) and the spike-in CDS reads
+  lost from 5.2% to 3.9%. A tie stays removed: about 1.7M of ribo_07's contaminant reads tie, mostly rRNA, snoRNA and
+  7SL sequence that transcriptome entries also contain, and the few of them that land in a CDS pile up (28S rRNA on
+  LSM4 at 775 times the rest of its CDS; yeast rRNA on the rDNA ORF YLR154C-G). The cost is the footprints inside
+  exonic miRNA hairpins (SERF2 20%, RPS27A 7–15%).
 - **salmon sees every alignment of a multimapping RNA-seq fragment.** The eIF pipeline mapped the RNA-seq with
   `--outSAMmultNmax 1`, which writes one alignment per fragment even when it maps to several transcripts, so salmon
   assigned each multimapping fragment (about 7% of alignments) to one arbitrary transcript instead of resolving it by

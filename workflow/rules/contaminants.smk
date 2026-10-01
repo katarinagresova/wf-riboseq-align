@@ -93,3 +93,98 @@ rule star_contaminant:
         gzip -c {params.prefix}Unmapped.out.mate1 > {output.fastq}
         rm -f {params.prefix}Unmapped.out.mate1 {params.prefix}Aligned.out.sam
         """
+
+
+# contaminant_filter: competitive. star_contaminant discards every read with a
+# contaminant hit; these two rules put back the ones whose best sense alignment
+# to the transcriptome scores higher than their contaminant alignment
+# (scripts/contaminant_compete.py). star_contaminant is left as it is (a change
+# to its command would rerun it, and everything after it, in remove mode), so
+# the reads are aligned to the contaminants once more, keeping the alignments.
+# Both STAR calls must use the same parameters as star_contaminant and
+# star_transcript, plus the AS attribute.
+rule contaminant_compete_align:
+    input:
+        fastq=f"{RESULTS_DIR}/trim_reads/{{sample}}.fastq.gz",
+        contaminant_index=f"{RESULTS_DIR}/star_index/contaminants",
+        transcriptome_index=f"{RESULTS_DIR}/star_index/transcriptome",
+    output:
+        removed=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz"),
+        contaminant=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz"),
+        transcriptome=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz"),
+    params:
+        prefix=f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/",
+    log:
+        f"{LOG_DIR}/contaminant_compete/{{sample}}.align.log",
+    conda:
+        "../envs/star.yaml"
+    threads: 8
+    shell:
+        r"""
+        exec > {log} 2>&1
+        rm -rf {params.prefix}contaminant_tmpSTAR {params.prefix}transcriptome_tmpSTAR
+        # star_contaminant's alignment; only the aligned reads, one alignment each
+        STAR \
+            --genomeDir {input.contaminant_index} \
+            --runThreadN {threads} \
+            --readFilesCommand zcat \
+            --outMultimapperOrder Random \
+            --outFilterMultimapNmax 10000 \
+            --outSAMmultNmax 1 \
+            --alignSJoverhangMin 8 \
+            --alignSJDBoverhangMin 1 \
+            --outTmpDir {params.prefix}contaminant_tmpSTAR \
+            --genomeLoad NoSharedMemory \
+            --outSAMattributes NH HI AS NM MD \
+            --outSAMtype BAM Unsorted \
+            --outFileNamePrefix {params.prefix}contaminant_ \
+            --readFilesIn {input.fastq}
+        samtools fastq {params.prefix}contaminant_Aligned.out.bam | gzip > {output.removed}
+        # read, contaminant record, AS
+        samtools view {params.prefix}contaminant_Aligned.out.bam |
+            awk -F'\t' -v OFS='\t' '{{for (i = 12; i <= NF; i++) if ($i ~ /^AS:i:/) print $1, $3, substr($i, 6)}}' |
+            gzip > {output.contaminant}
+
+        # star_transcript's alignment of those reads
+        STAR \
+            --runThreadN {threads} \
+            --genomeDir {input.transcriptome_index} \
+            --outTmpDir {params.prefix}transcriptome_tmpSTAR \
+            --outSAMtype BAM Unsorted \
+            --outSAMmode NoQS \
+            --outSAMattributes NH AS NM \
+            --seedSearchLmax 10 \
+            --outFilterMultimapNmax 255 \
+            --outFilterMismatchNmax 2 \
+            --outFilterMultimapScoreRange 0 \
+            --outFilterIntronMotifs RemoveNoncanonical \
+            --outFileNamePrefix {params.prefix}transcriptome_ \
+            --readFilesIn {output.removed} \
+            --readFilesCommand zcat
+        # read, flag, AS
+        samtools view {params.prefix}transcriptome_Aligned.out.bam |
+            awk -F'\t' -v OFS='\t' '{{for (i = 12; i <= NF; i++) if ($i ~ /^AS:i:/) print $1, $2, substr($i, 6)}}' |
+            gzip > {output.transcriptome}
+        rm -f {params.prefix}contaminant_Aligned.out.bam {params.prefix}transcriptome_Aligned.out.bam
+        """
+
+
+rule contaminant_compete:
+    input:
+        clean=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
+        contam_log=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
+        removed=f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz",
+        contaminant=f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz",
+        transcriptome=f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz",
+        script=workflow.source_path("../scripts/contaminant_compete.py"),
+    output:
+        fastq=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.gz",
+        stats=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv",
+        records=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.compete_records.tsv",
+    log:
+        f"{LOG_DIR}/contaminant_compete/{{sample}}.log",
+    conda:
+        "../envs/python.yaml"
+    shell:
+        "python {input.script} {input.clean} {input.contam_log} {input.removed} {input.contaminant} "
+        "{input.transcriptome} {output.fastq} {output.stats} {output.records} 2> {log}"

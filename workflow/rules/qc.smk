@@ -1,12 +1,17 @@
 # Per-library Ribo-seq read counts: the contaminant step (from STAR's
 # Log.final.out) and the species split. A read aligned to both species stays in
 # both BAMs; it is counted as both_species, not moved. Counts are collapsed
-# reads, the unit STAR reports as input reads.
+# reads, the unit STAR reports as input reads. contaminant_unique / _multi are
+# what star_contaminant removed; with contaminant_filter: competitive,
+# contaminant_rescued of them are put back (contaminant_compete) and counted in
+# clean_reads (0 otherwise).
 
 
 rule qc_library:
     input:
         contam_log=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
+        rescue=([f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv"]
+                if CONTAMINANT_FILTER == "competitive" else []),
         human=f"{RESULTS_DIR}/split_bam/transcriptome/human/{{sample}}.bam",
         spike_in=f"{RESULTS_DIR}/split_bam/transcriptome/spike_in/{{sample}}.bam",
     output:
@@ -23,6 +28,10 @@ rule qc_library:
         input=$(star_stat "Number of input reads")
         unique=$(star_stat "Uniquely mapped reads number")
         multi=$(star_stat "Number of reads mapped to multiple loci")
+        rescued=0
+        if [ -n "{input.rescue}" ]; then
+            rescued=$(awk -F'\t' '$1 == "rescued" {{print $2}}' {input.rescue})
+        fi
 
         rm -rf {params.tmp_dir}
         mkdir -p {params.tmp_dir}
@@ -32,15 +41,15 @@ rule qc_library:
         # comm columns: 1 = human only, 2 = spike-in only, 3 = both
         comm {params.tmp_dir}/human.txt {params.tmp_dir}/spike_in.txt |
         awk -F'\t' -v OFS='\t' -v sample={wildcards.sample} \
-            -v input="$input" -v unique="$unique" -v multi="$multi" '
+            -v input="$input" -v unique="$unique" -v multi="$multi" -v rescued="$rescued" '
             $1 != "" {{ h++; next }}
             $2 != "" {{ s++; next }}
             {{ b++ }}
             END {{
                 mapped = h + s + b
-                print "sample", "input_reads", "contaminant_unique", "contaminant_multi", "clean_reads",
-                      "human_only", "spike_in_only", "both_species", "spike_in_fraction"
-                print sample, input, unique, multi, input - unique - multi,
+                print "sample", "input_reads", "contaminant_unique", "contaminant_multi", "contaminant_rescued",
+                      "clean_reads", "human_only", "spike_in_only", "both_species", "spike_in_fraction"
+                print sample, input, unique, multi, rescued, input - unique - multi + rescued,
                       h + 0, s + 0, b + 0, (mapped ? s / mapped : 0)
             }}' > {output}
         rm -rf {params.tmp_dir}

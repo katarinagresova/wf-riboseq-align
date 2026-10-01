@@ -36,10 +36,10 @@ rule star_transcript_index:
 
 
 # Multimappers are kept (up to 255 loci); STAR marks one alignment per read
-# primary, chosen at random among equally good loci.
+# primary, chosen at random among equally good loci. CLEAN_FASTQ: Snakefile.
 rule star_transcript:
     input:
-        fastq=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
+        fastq=CLEAN_FASTQ,
         index=f"{RESULTS_DIR}/star_index/transcriptome",
     output:
         f"{RESULTS_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
