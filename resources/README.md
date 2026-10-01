@@ -1,0 +1,31 @@
+# resources/
+
+Gitignored scratch space for locally-generated reference files (see `.gitignore`). This
+README documents provenance for files that are expected to show up here, since the files
+themselves aren't committed.
+
+## contaminants_built.fa
+
+Produced by the `build_contaminants` rule (`workflow/rules/contaminants.smk`), which runs
+`workflow/scripts/build_contaminants.py` in the `python` conda env
+(`workflow/envs/python.yaml`: python 3.14.7). The rule is not part of the default targets —
+it needs internet access, so it's run explicitly and the output is then pointed to by
+`contaminants_fa` in `config.yaml`.
+
+Generated 2026-09-30. Built from:
+
+- Ensembl release 109, `Homo_sapiens.GRCh38.ncrna.fa.gz` and
+  `Saccharomyces_cerevisiae.R64-1-1.ncrna.fa.gz` — all ncRNA biotypes except `lncRNA`
+  (rRNA, tRNA, snRNA, snoRNA, scaRNA, miRNA, misc_RNA, ...). Release 109 matches
+  `spike_in_transcriptome_fa` elsewhere in the pipeline.
+- GtRNAdb `hg38-tRNAs.fa` (eukaryota/Hsapi38) — human nuclear tRNA genes, which Ensembl
+  does not annotate.
+- NCBI RefSeq, fetched by accession (efetch, db=nuccore): `NR_003286.2` (18S),
+  `NR_003287.2` (28S), `NR_003285.2` (5.8S), `NR_023379.1` (5S) — canonical full-length
+  rRNAs; Ensembl's human rRNA biotype entries are fragmentary pseudogene copies.
+- 12 Illumina TruSeq/RPI small-RNA index-barcode sequences and 2 synthetic RNA
+  size-marker oligos, hardcoded in the script (`LITERAL_SEQUENCES`) — wet-lab protocol
+  sequences not in any database, copied verbatim from the lab's prior
+  `contaminants.combined_human_yeast.fa`.
+
+See the script's docstring and `CLAUDE.md` for further design context.

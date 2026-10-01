@@ -4,6 +4,7 @@ results/
 logs/
 resources/*
 !resources/.gitkeep
+!resources/README.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
