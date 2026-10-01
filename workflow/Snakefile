@@ -30,6 +30,7 @@ include: "rules/rnaseq.smk"
 include: "rules/autofilter.smk"
 include: "rules/align.smk"
 include: "rules/qc.smk"
+include: "rules/fastqc.smk"
 
 
 rule all:
@@ -39,3 +40,6 @@ rule all:
         f"{RESULTS_DIR}/qc/summary.tsv",
         expand(f"{RESULTS_DIR}/salmon/{{sample}}/quant.sf", sample=RNA_SAMPLES),
         expand(f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai", sample=RNA_SAMPLES),
+        expand(f"{RESULTS_DIR}/fastqc/{{stage}}/{{sample}}_fastqc.html",
+               stage=["ribo_raw", "ribo_trimmed"], sample=RIBO_SAMPLES),
+        expand(f"{RESULTS_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.html", sample=RNA_SAMPLES, mate=[1, 2]),

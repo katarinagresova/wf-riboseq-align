@@ -23,6 +23,10 @@ rule star_transcript_index_rnaseq:
         "--outFileNamePrefix {params.log_prefix} > {log} 2>&1"
 
 
+# Every alignment of a multimapping fragment is written (no --outSAMmultNmax),
+# so salmon distributes it over its transcripts by EM. With
+# --outSAMmultNmax 1, as in the eIF pipeline, salmon saw one arbitrary
+# alignment per fragment and assigned it there.
 rule star_transcript_rnaseq:
     input:
         fastq1=lambda wc: samples.loc[wc.sample, "fastq_1"],
@@ -49,7 +53,6 @@ rule star_transcript_rnaseq:
             --outFilterMultimapNmax 255 \
             --outFilterMismatchNmax 2 \
             --outFilterIntronMotifs RemoveNoncanonical \
-            --outSAMmultNmax 1 \
             --outFileNamePrefix {params.prefix} \
             --readFilesIn {input.fastq1} {input.fastq2} \
             --readFilesCommand zcat

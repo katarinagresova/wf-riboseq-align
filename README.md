@@ -21,9 +21,13 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
    all mapped). Reads aligned to both species stay in both BAM files and are only counted. The run fails if any
    library's spike-in fraction is below `min_spike_in_fraction` (default 0.01; set 0 for libraries without spike-in)
 
-Total RNA-seq (paired-end): map to the human transcriptome with STAR, then quantify with `salmon quant`. salmon
-reads STAR's unsorted BAM (mates adjacent), which is deleted afterwards; the run fails if salmon reports any
-suspicious pair.
+Total RNA-seq (paired-end): map to the human transcriptome with STAR (every alignment of a multimapping fragment
+kept, up to 255 loci), then quantify with `salmon quant`. salmon reads STAR's unsorted BAM (mates adjacent), which is
+deleted afterwards; the run fails if salmon reports any suspicious pair.
+
+FastQC (`fastqc_ribo_raw`, `fastqc_rna_raw`, `fastqc_ribo_trimmed`): reports on the raw Ribo-seq fastqs, the raw
+RNA-seq fastqs (R1 and R2 separately), and the trimmed Ribo-seq reads that `star_contaminant` maps (the output of
+step 3). Those trimmed reads are already collapsed, so their duplication plot says nothing about PCR duplicates.
 
 ## The one choice: `mode`
 
@@ -59,6 +63,8 @@ split_bam/transcriptome/human/<sample>.bam(.bai)     Ribo-seq, human transcripts
 split_bam/transcriptome/spike_in/<sample>.bam(.bai)  Ribo-seq, spike-in reads
 salmon/<sample>/quant.sf                             RNA-seq quantification
 qc/<sample>.stats.tsv, qc/summary.tsv                Ribo-seq read counts per library (collapsed reads)
+fastqc/{ribo_raw,ribo_trimmed}/<sample>_fastqc.{html,zip}   FastQC, Ribo-seq before and after trimming
+fastqc/rna_raw/<sample>_R{1,2}_fastqc.{html,zip}              FastQC, raw RNA-seq
 reference/                                           the references these were aligned to
   transcriptome.combined_human_spike_in.fa           (the BAM @SQ lines refer to this)
   human_transcriptome.rnaseq_filtered.{fa,gtf}       (mode filtered)
@@ -146,6 +152,10 @@ can then consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
   the human BAMs drop by 20–38% and in the spike-in BAMs by 55–76%. Every output from `filter_reads` onward
   therefore differs from the eIF pipeline's; only the RNA-seq outputs are unchanged, because they skip the
   contaminant step.
+- **salmon sees every alignment of a multimapping RNA-seq fragment.** The eIF pipeline mapped the RNA-seq with
+  `--outSAMmultNmax 1`, which writes one alignment per fragment even when it maps to several transcripts, so salmon
+  assigned each multimapping fragment (about 7% of alignments) to one arbitrary transcript instead of resolving it by
+  EM. Its own comment removed the flag for the Ribo-seq alignment for this reason, but kept it for the RNA-seq.
 - **Spike-in split in `unfiltered` mode.** The harringtonine pipeline built its Ribo-seq index from the human
   transcriptome only. It then labelled the last 6,612 human transcripts as "yeast", so its `yeast/` BAM files hold
   human reads and the spike-in was never aligned. Here the index is always human + spike-in, and the split checks
