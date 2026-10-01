@@ -19,16 +19,11 @@ minlength: 18
 maxlength: 100
 qualcutoff: 20
 
-# rRNA / tRNA / snRNA ... reads matching these are discarded (number_contaminants)
+# rRNA / tRNA / snRNA ... (number_contaminants). A Ribo-seq read that aligns to
+# one is discarded only if that alignment scores at least as high (STAR AS) as
+# its best sense alignment to the transcriptome; otherwise it is mapped like a
+# clean read (contaminant_compete). A tie stays discarded.
 contaminants_fa: "/path/to/contaminants.fa"
-
-# What happens to a Ribo-seq read that aligns to a contaminant:
-#   remove      - it is discarded (star_contaminant), as in the eIF pipeline
-#   competitive - it is discarded only if its contaminant alignment scores at
-#                 least as high (STAR AS) as its best sense alignment to the
-#                 transcriptome; otherwise it is mapped like a clean read
-#                 (contaminant_compete). A tie stays discarded.
-contaminant_filter: "remove"
 
 # Transcriptomes. Every read type maps to these, never to a genome.
 human_transcriptome_fa: "/path/to/human_transcriptome.fa"

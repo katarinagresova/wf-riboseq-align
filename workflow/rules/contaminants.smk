@@ -1,5 +1,6 @@
 # Remove rRNA / tRNA / other contaminant reads: map to the contaminant set and
-# keep what does NOT align.
+# keep what does NOT align, plus the aligned reads that fit the transcriptome
+# better (the competitive filter).
 
 
 # Not part of the default targets: run explicitly (needs internet access) to
@@ -50,6 +51,9 @@ rule star_contaminant_index:
         "--outFileNamePrefix {params.log_prefix} > {log} 2>&1"
 
 
+# Aligns the trimmed reads to the contaminants once: the unaligned reads are the
+# clean fastq, the aligned ones (one alignment each, with AS) are kept for the
+# competitive filter below.
 rule star_contaminant:
     input:
         fastq=f"{RESULTS_DIR}/trim_reads/{{sample}}.fastq.gz",
@@ -57,6 +61,7 @@ rule star_contaminant:
     output:
         fastq=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
         log_final=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
+        bam=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam"),
     params:
         prefix=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_",
         tmp_dir=f"{RESULTS_DIR}/filter_reads/{{sample}}/_tmpSTAR",
@@ -70,7 +75,6 @@ rule star_contaminant:
             --genomeDir {input.index} \
             --runThreadN {threads} \
             --readFilesCommand zcat \
-            --outSAMunmapped Within \
             --outMultimapperOrder Random \
             --outFilterMultimapNmax 10000 \
             --outSAMmultNmax 1 \
@@ -79,7 +83,7 @@ rule star_contaminant:
             --outTmpDir {params.tmp_dir} \
             --genomeLoad NoSharedMemory \
             --outSAMattributes NH HI AS NM MD \
-            --outSAMtype SAM \
+            --outSAMtype BAM Unsorted \
             --outFileNamePrefix {params.prefix} \
             --outReadsUnmapped Fastx \
             --readFilesIn {input.fastq}
@@ -91,22 +95,17 @@ rule star_contaminant:
         fi
 
         gzip -c {params.prefix}Unmapped.out.mate1 > {output.fastq}
-        rm -f {params.prefix}Unmapped.out.mate1 {params.prefix}Aligned.out.sam
+        rm -f {params.prefix}Unmapped.out.mate1
         """
 
 
-# contaminant_filter: competitive. star_contaminant discards every read with a
-# contaminant hit; these two rules put back the ones whose best sense alignment
-# to the transcriptome scores higher than their contaminant alignment
-# (scripts/contaminant_compete.py). star_contaminant is left as it is (a change
-# to its command would rerun it, and everything after it, in remove mode), so
-# the reads are aligned to the contaminants once more, keeping the alignments.
-# Both STAR calls must use the same parameters as star_contaminant and
-# star_transcript, plus the AS attribute.
+# The competitive filter: of the reads star_contaminant aligned, put back the
+# ones whose best sense alignment to the transcriptome scores higher than their
+# contaminant alignment (scripts/contaminant_compete.py). The transcriptome STAR
+# call must use star_transcript's parameters, plus the AS attribute.
 rule contaminant_compete_align:
     input:
-        fastq=f"{RESULTS_DIR}/trim_reads/{{sample}}.fastq.gz",
-        contaminant_index=f"{RESULTS_DIR}/star_index/contaminants",
+        bam=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam",
         transcriptome_index=f"{RESULTS_DIR}/star_index/transcriptome",
     output:
         removed=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz"),
@@ -122,26 +121,10 @@ rule contaminant_compete_align:
     shell:
         r"""
         exec > {log} 2>&1
-        rm -rf {params.prefix}contaminant_tmpSTAR {params.prefix}transcriptome_tmpSTAR
-        # star_contaminant's alignment; only the aligned reads, one alignment each
-        STAR \
-            --genomeDir {input.contaminant_index} \
-            --runThreadN {threads} \
-            --readFilesCommand zcat \
-            --outMultimapperOrder Random \
-            --outFilterMultimapNmax 10000 \
-            --outSAMmultNmax 1 \
-            --alignSJoverhangMin 8 \
-            --alignSJDBoverhangMin 1 \
-            --outTmpDir {params.prefix}contaminant_tmpSTAR \
-            --genomeLoad NoSharedMemory \
-            --outSAMattributes NH HI AS NM MD \
-            --outSAMtype BAM Unsorted \
-            --outFileNamePrefix {params.prefix}contaminant_ \
-            --readFilesIn {input.fastq}
-        samtools fastq {params.prefix}contaminant_Aligned.out.bam | gzip > {output.removed}
+        rm -rf {params.prefix}transcriptome_tmpSTAR
+        samtools fastq {input.bam} | gzip > {output.removed}
         # read, contaminant record, AS
-        samtools view {params.prefix}contaminant_Aligned.out.bam |
+        samtools view {input.bam} |
             awk -F'\t' -v OFS='\t' '{{for (i = 12; i <= NF; i++) if ($i ~ /^AS:i:/) print $1, $3, substr($i, 6)}}' |
             gzip > {output.contaminant}
 
@@ -165,7 +148,7 @@ rule contaminant_compete_align:
         samtools view {params.prefix}transcriptome_Aligned.out.bam |
             awk -F'\t' -v OFS='\t' '{{for (i = 12; i <= NF; i++) if ($i ~ /^AS:i:/) print $1, $2, substr($i, 6)}}' |
             gzip > {output.transcriptome}
-        rm -f {params.prefix}contaminant_Aligned.out.bam {params.prefix}transcriptome_Aligned.out.bam
+        rm -f {params.prefix}transcriptome_Aligned.out.bam
         """
 
 

@@ -29,7 +29,6 @@ set-resources:
   star_contaminant:
     cpus_per_task: 8
     mem_mb: 16000
-  # contaminant_filter: competitive only
   contaminant_compete_align:
     cpus_per_task: 8
     mem_mb: 24000

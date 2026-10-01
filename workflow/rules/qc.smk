@@ -2,16 +2,14 @@
 # Log.final.out) and the species split. A read aligned to both species stays in
 # both BAMs; it is counted as both_species, not moved. Counts are collapsed
 # reads, the unit STAR reports as input reads. contaminant_unique / _multi are
-# what star_contaminant removed; with contaminant_filter: competitive,
-# contaminant_rescued of them are put back (contaminant_compete) and counted in
-# clean_reads (0 otherwise).
+# what star_contaminant aligned; contaminant_rescued of them are put back
+# (contaminant_compete) and counted in clean_reads.
 
 
 rule qc_library:
     input:
         contam_log=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
-        rescue=([f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv"]
-                if CONTAMINANT_FILTER == "competitive" else []),
+        rescue=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv",
         human=f"{RESULTS_DIR}/split_bam/transcriptome/human/{{sample}}.bam",
         spike_in=f"{RESULTS_DIR}/split_bam/transcriptome/spike_in/{{sample}}.bam",
     output:
@@ -28,10 +26,7 @@ rule qc_library:
         input=$(star_stat "Number of input reads")
         unique=$(star_stat "Uniquely mapped reads number")
         multi=$(star_stat "Number of reads mapped to multiple loci")
-        rescued=0
-        if [ -n "{input.rescue}" ]; then
-            rescued=$(awk -F'\t' '$1 == "rescued" {{print $2}}' {input.rescue})
-        fi
+        rescued=$(awk -F'\t' '$1 == "rescued" {{print $2}}' {input.rescue})
 
         rm -rf {params.tmp_dir}
         mkdir -p {params.tmp_dir}

@@ -1,8 +1,8 @@
-"""Competitive contaminant filter (config contaminant_filter: competitive).
+"""Competitive contaminant filter.
 
-star_contaminant discards every read that aligns to a contaminant. This puts a discarded read
-back when its best sense alignment to the transcriptome scores higher (STAR AS) than its
-contaminant alignment. Antisense alignments do not count: the libraries are stranded.
+Of the reads star_contaminant aligns to a contaminant, this puts one back when its best sense
+alignment to the transcriptome scores higher (STAR AS) than its contaminant alignment.
+Antisense alignments do not count: the libraries are stranded.
 
 A tie stays discarded. Ties are reads whose sequence lies in both references, and most are not
 footprints: rRNA, snoRNA and 7SL sequence inside transcriptome entries, yeast rRNA inside the
@@ -19,7 +19,7 @@ Classes, per read the contaminant alignment removed:
 
 Inputs are contaminant_compete_align's: the removed reads (fastq), read / record / AS of their
 contaminant alignment, read / flag / AS of their transcriptome alignments. The read count must
-equal what star_contaminant removed (its Log.final.out), so the two alignments agree.
+equal what star_contaminant aligned (its Log.final.out).
 
 Writes star_contaminant's clean fastq followed by the rescued reads (a second gzip member), the
 class counts (stats.tsv, `class<TAB>reads`, plus a `removed` row) and the counts per contaminant
