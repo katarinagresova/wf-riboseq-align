@@ -3,7 +3,7 @@
 results/
 logs/
 resources/*
-!resources/.gitkeep
+!resources/contaminants_built.fa
 !resources/README.md
 
 # Byte-compiled / optimized / DLL files
