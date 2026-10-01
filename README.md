@@ -80,9 +80,12 @@ star/, filter_reads/, ...                            intermediates, incl. STAR L
 Per-step logs are written to `LOG_DIR` (default `logs/`). `logs/collapse_reads/` holds read counts, read-length
 distributions and base composition.
 
-With an `experiment` column, each experiment gets all of the above to itself, in `RESULTS_DIR/<experiment>/` and
-`LOG_DIR/<experiment>/`: its own `filtered` reference (from its own RNA-seq), its own indexes and its own
-`qc/summary.tsv`. Without it, the whole of `samples.csv` is one experiment, directly in `RESULTS_DIR`.
+With an `experiment` column (as in the example `config/samples.csv`), each experiment gets the above to itself, in
+`RESULTS_DIR/<experiment>/` and `LOG_DIR/<experiment>/`: its own `filtered` reference (from its own RNA-seq), Ribo-seq
+index and `qc/summary.tsv`. What does not depend on the experiment (the contaminant set and its index, the RNA-seq
+index of the unfiltered transcriptome) is built once, in `RESULTS_DIR/reference/` and `RESULTS_DIR/star_index/`, so
+no experiment can be named `reference`, `star_index` or `star`. Without the column, the whole of `samples.csv` is one
+experiment, directly in `RESULTS_DIR`.
 
 ## Setup
 
