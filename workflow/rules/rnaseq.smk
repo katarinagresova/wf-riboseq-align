@@ -1,6 +1,9 @@
 # Matched total RNA-seq (paired-end): map to the UNFILTERED human transcriptome
 # and quantify with salmon. Runs in both modes; in mode "filtered" these quants
 # also decide which transcripts the ribo reference keeps (autofilter.smk).
+#
+# The unfiltered index does not depend on the experiment: it lives in
+# RESULTS_DIR, not EXP_DIR, so a multi-experiment run builds it once.
 
 
 rule star_transcript_index_rnaseq:
@@ -33,11 +36,11 @@ rule star_transcript_rnaseq:
         fastq2=lambda wc: samples.loc[wc.sample, "fastq_2"],
         index=f"{RESULTS_DIR}/star_index/unfiltered_transcriptome",
     output:
-        bam=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam",
-        bai=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai",
-        unsorted_bam=temp(f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam"),
+        bam=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam",
+        bai=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai",
+        unsorted_bam=temp(f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam"),
     params:
-        prefix=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_",
+        prefix=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_",
     conda:
         "../envs/star.yaml"
     threads: 8
@@ -64,14 +67,14 @@ rule star_transcript_rnaseq:
 
 rule salmon_bam:
     input:
-        bam=f"{RESULTS_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam",
+        bam=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam",
         fasta=config["human_transcriptome_fa"],
     output:
-        f"{RESULTS_DIR}/salmon/{{sample}}/quant.sf",
+        f"{EXP_DIR}/salmon/{{sample}}/quant.sf",
     params:
-        out_dir=f"{RESULTS_DIR}/salmon/{{sample}}",
+        out_dir=f"{EXP_DIR}/salmon/{{sample}}",
     log:
-        f"{LOG_DIR}/salmon/{{sample}}.log",
+        f"{EXP_LOG_DIR}/salmon/{{sample}}.log",
     conda:
         "../envs/salmon.yaml"
     threads: 4

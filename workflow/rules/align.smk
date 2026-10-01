@@ -8,7 +8,7 @@ rule combined_transcriptome:
         human=HUMAN_TRANSCRIPTOME_FA,
         spike_in=config["spike_in_transcriptome_fa"],
     output:
-        f"{RESULTS_DIR}/reference/transcriptome.combined_human_spike_in.fa",
+        f"{EXP_DIR}/reference/transcriptome.combined_human_spike_in.fa",
     conda:
         "../envs/coreutils.yaml"
     shell:
@@ -17,14 +17,14 @@ rule combined_transcriptome:
 
 rule star_transcript_index:
     input:
-        f"{RESULTS_DIR}/reference/transcriptome.combined_human_spike_in.fa",
+        f"{EXP_DIR}/reference/transcriptome.combined_human_spike_in.fa",
     output:
-        index=directory(f"{RESULTS_DIR}/star_index/transcriptome"),
-        chrom_sizes=f"{RESULTS_DIR}/star_index/transcriptome/chrNameLength.txt",
+        index=directory(f"{EXP_DIR}/star_index/transcriptome"),
+        chrom_sizes=f"{EXP_DIR}/star_index/transcriptome/chrNameLength.txt",
     log:
-        f"{LOG_DIR}/star/transcriptome_index.log",
+        f"{EXP_LOG_DIR}/star/transcriptome_index.log",
     params:
-        log_prefix=f"{LOG_DIR}/star/transcriptome_index.",
+        log_prefix=f"{EXP_LOG_DIR}/star/transcriptome_index.",
     conda:
         "../envs/star.yaml"
     threads: 8
@@ -40,11 +40,11 @@ rule star_transcript_index:
 rule star_transcript:
     input:
         fastq=CLEAN_FASTQ,
-        index=f"{RESULTS_DIR}/star_index/transcriptome",
+        index=f"{EXP_DIR}/star_index/transcriptome",
     output:
-        f"{RESULTS_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
+        f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
     params:
-        prefix=f"{RESULTS_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_",
+        prefix=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_",
     conda:
         "../envs/star.yaml"
     threads: 12
@@ -72,15 +72,15 @@ rule star_transcript:
 
 rule split_bed_transcriptome:
     input:
-        chrom_sizes=f"{RESULTS_DIR}/star_index/transcriptome/chrNameLength.txt",
+        chrom_sizes=f"{EXP_DIR}/star_index/transcriptome/chrNameLength.txt",
         human_fa=HUMAN_TRANSCRIPTOME_FA,
         spike_in_fa=config["spike_in_transcriptome_fa"],
         script=workflow.source_path("../scripts/split_bed_transcriptome.py"),
     output:
-        human=f"{RESULTS_DIR}/reference/transcripts.human.bed",
-        spike_in=f"{RESULTS_DIR}/reference/transcripts.spike_in.bed",
+        human=f"{EXP_DIR}/reference/transcripts.human.bed",
+        spike_in=f"{EXP_DIR}/reference/transcripts.spike_in.bed",
     log:
-        f"{LOG_DIR}/align/split_bed_transcriptome.log",
+        f"{EXP_LOG_DIR}/align/split_bed_transcriptome.log",
     conda:
         "../envs/python.yaml"
     shell:
@@ -90,11 +90,11 @@ rule split_bed_transcriptome:
 
 rule split_bam_transcriptome:
     input:
-        bam=f"{RESULTS_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
-        bed=f"{RESULTS_DIR}/reference/transcripts.{{species}}.bed",
+        bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
+        bed=f"{EXP_DIR}/reference/transcripts.{{species}}.bed",
     output:
-        bam=f"{RESULTS_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam",
-        bai=f"{RESULTS_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",
+        bam=f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam",
+        bai=f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",
     wildcard_constraints:
         species="human|spike_in",
     conda:

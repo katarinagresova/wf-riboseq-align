@@ -6,15 +6,15 @@
 rule filter_rnaseq:
     input:
         fa=config["human_transcriptome_fa"],
-        quant=expand(f"{RESULTS_DIR}/salmon/{{sample}}/quant.sf", sample=RNA_SAMPLES),
+        quant=lambda wc: experiment_files(f"{EXP_DIR}/salmon/{{sample}}/quant.sf", wc.get("experiment"), "rna"),
         script=workflow.source_path("../scripts/autofilter_rnaseq.py"),
     output:
-        f"{RESULTS_DIR}/reference/rnaseq_filter_blacklist_txid.txt",
+        f"{EXP_DIR}/reference/rnaseq_filter_blacklist_txid.txt",
     params:
         min_tpm=config["autofilter"]["min_tpm"],
         min_samples=config["autofilter"]["min_samples"],
     log:
-        f"{LOG_DIR}/autofilter/filter_rnaseq.log",
+        f"{EXP_LOG_DIR}/autofilter/filter_rnaseq.log",
     conda:
         "../envs/python.yaml"
     shell:
@@ -26,13 +26,13 @@ rule make_filtered_resources:
     input:
         fa=config["human_transcriptome_fa"],
         gtf=config["human_transcriptome_gtf"],
-        blacklist=f"{RESULTS_DIR}/reference/rnaseq_filter_blacklist_txid.txt",
+        blacklist=f"{EXP_DIR}/reference/rnaseq_filter_blacklist_txid.txt",
         script=workflow.source_path("../scripts/filter_transcriptome.py"),
     output:
-        fa=f"{RESULTS_DIR}/reference/human_transcriptome.rnaseq_filtered.fa",
-        gtf=f"{RESULTS_DIR}/reference/human_transcriptome.rnaseq_filtered.gtf",
+        fa=f"{EXP_DIR}/reference/human_transcriptome.rnaseq_filtered.fa",
+        gtf=f"{EXP_DIR}/reference/human_transcriptome.rnaseq_filtered.gtf",
     log:
-        f"{LOG_DIR}/autofilter/make_filtered_resources.log",
+        f"{EXP_LOG_DIR}/autofilter/make_filtered_resources.log",
     conda:
         "../envs/python.yaml"
     shell:

@@ -6,9 +6,9 @@ rule cutadapt_reads:
     input:
         lambda wc: samples.loc[wc.sample, "fastq_1"],
     output:
-        f"{RESULTS_DIR}/cutadapt_reads/{{sample}}.fastq.gz",
+        f"{EXP_DIR}/cutadapt_reads/{{sample}}.fastq.gz",
     log:
-        f"{LOG_DIR}/cutadapt/{{sample}}.log",
+        f"{EXP_LOG_DIR}/cutadapt/{{sample}}.log",
     # via params, not {config[...]} in the shell string: as a module, the shell
     # would format against the importing workflow's config
     params:
@@ -31,12 +31,12 @@ rule cutadapt_reads:
 # so identical reads with different randomers stay distinct molecules.
 rule collapse_reads:
     input:
-        fastq=f"{RESULTS_DIR}/cutadapt_reads/{{sample}}.fastq.gz",
+        fastq=f"{EXP_DIR}/cutadapt_reads/{{sample}}.fastq.gz",
         script=workflow.source_path("../scripts/collapse_reads.py"),
     output:
-        f"{RESULTS_DIR}/collapse_reads/{{sample}}.fastq.gz",
+        f"{EXP_DIR}/collapse_reads/{{sample}}.fastq.gz",
     log:
-        f"{LOG_DIR}/collapse_reads/{{sample}}.log",
+        f"{EXP_LOG_DIR}/collapse_reads/{{sample}}.log",
     conda:
         "../envs/python.yaml"
     shell:
@@ -45,12 +45,12 @@ rule collapse_reads:
 
 rule trim_reads:
     input:
-        fastq=f"{RESULTS_DIR}/collapse_reads/{{sample}}.fastq.gz",
+        fastq=f"{EXP_DIR}/collapse_reads/{{sample}}.fastq.gz",
         script=workflow.source_path("../scripts/remove_randomers.py"),
     output:
-        f"{RESULTS_DIR}/trim_reads/{{sample}}.fastq.gz",
+        f"{EXP_DIR}/trim_reads/{{sample}}.fastq.gz",
     log:
-        f"{LOG_DIR}/trim_reads/{{sample}}.log",
+        f"{EXP_LOG_DIR}/trim_reads/{{sample}}.log",
     conda:
         "../envs/python.yaml"
     shell:

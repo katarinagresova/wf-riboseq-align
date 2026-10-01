@@ -8,15 +8,15 @@
 
 rule qc_library:
     input:
-        contam_log=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
-        rescue=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv",
-        human=f"{RESULTS_DIR}/split_bam/transcriptome/human/{{sample}}.bam",
-        spike_in=f"{RESULTS_DIR}/split_bam/transcriptome/spike_in/{{sample}}.bam",
+        contam_log=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
+        rescue=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv",
+        human=f"{EXP_DIR}/split_bam/transcriptome/human/{{sample}}.bam",
+        spike_in=f"{EXP_DIR}/split_bam/transcriptome/spike_in/{{sample}}.bam",
     output:
-        f"{RESULTS_DIR}/qc/{{sample}}.stats.tsv",
+        f"{EXP_DIR}/qc/{{sample}}.stats.tsv",
     # sort spills here, not to the node's /tmp (filled up on compute nodes)
     params:
-        tmp_dir=f"{RESULTS_DIR}/qc/{{sample}}_tmp_sort",
+        tmp_dir=f"{EXP_DIR}/qc/{{sample}}_tmp_sort",
     conda:
         "../envs/star.yaml"
     shell:
@@ -53,14 +53,14 @@ rule qc_library:
 
 rule qc_summary:
     input:
-        tsvs=expand(f"{RESULTS_DIR}/qc/{{sample}}.stats.tsv", sample=RIBO_SAMPLES),
+        tsvs=lambda wc: experiment_files(f"{EXP_DIR}/qc/{{sample}}.stats.tsv", wc.get("experiment"), "ribo"),
         script=workflow.source_path("../scripts/qc_summary.py"),
     output:
-        f"{RESULTS_DIR}/qc/summary.tsv",
+        f"{EXP_DIR}/qc/summary.tsv",
     params:
         min_spike_in_fraction=config.get("min_spike_in_fraction", 0.01),
     log:
-        f"{LOG_DIR}/qc/qc_summary.log",
+        f"{EXP_LOG_DIR}/qc/qc_summary.log",
     conda:
         "../envs/python.yaml"
     shell:

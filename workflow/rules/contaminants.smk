@@ -1,6 +1,9 @@
 # Remove rRNA / tRNA / other contaminant reads: map to the contaminant set and
 # keep what does NOT align, plus the aligned reads that fit the transcriptome
 # better (the competitive filter).
+#
+# The contaminant set and its index do not depend on the experiment: they live
+# in RESULTS_DIR, not EXP_DIR, so a multi-experiment run builds them once.
 
 
 # Not part of the default targets: run explicitly (needs internet access) to
@@ -56,15 +59,15 @@ rule star_contaminant_index:
 # competitive filter below.
 rule star_contaminant:
     input:
-        fastq=f"{RESULTS_DIR}/trim_reads/{{sample}}.fastq.gz",
+        fastq=f"{EXP_DIR}/trim_reads/{{sample}}.fastq.gz",
         index=f"{RESULTS_DIR}/star_index/contaminants",
     output:
-        fastq=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
-        log_final=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
-        bam=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam"),
+        fastq=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
+        log_final=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
+        bam=temp(f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam"),
     params:
-        prefix=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_",
-        tmp_dir=f"{RESULTS_DIR}/filter_reads/{{sample}}/_tmpSTAR",
+        prefix=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_",
+        tmp_dir=f"{EXP_DIR}/filter_reads/{{sample}}/_tmpSTAR",
     conda:
         "../envs/star.yaml"
     threads: 8
@@ -105,16 +108,16 @@ rule star_contaminant:
 # call must use star_transcript's parameters, plus the AS attribute.
 rule contaminant_compete_align:
     input:
-        bam=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam",
-        transcriptome_index=f"{RESULTS_DIR}/star_index/transcriptome",
+        bam=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam",
+        transcriptome_index=f"{EXP_DIR}/star_index/transcriptome",
     output:
-        removed=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz"),
-        contaminant=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz"),
-        transcriptome=temp(f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz"),
+        removed=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz"),
+        contaminant=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz"),
+        transcriptome=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz"),
     params:
-        prefix=f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/",
+        prefix=f"{EXP_DIR}/filter_reads/{{sample}}/compete/",
     log:
-        f"{LOG_DIR}/contaminant_compete/{{sample}}.align.log",
+        f"{EXP_LOG_DIR}/contaminant_compete/{{sample}}.align.log",
     conda:
         "../envs/star.yaml"
     threads: 8
@@ -154,18 +157,18 @@ rule contaminant_compete_align:
 
 rule contaminant_compete:
     input:
-        clean=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
-        contam_log=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
-        removed=f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz",
-        contaminant=f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz",
-        transcriptome=f"{RESULTS_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz",
+        clean=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
+        contam_log=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
+        removed=f"{EXP_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz",
+        contaminant=f"{EXP_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz",
+        transcriptome=f"{EXP_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz",
         script=workflow.source_path("../scripts/contaminant_compete.py"),
     output:
-        fastq=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.gz",
-        stats=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv",
-        records=f"{RESULTS_DIR}/filter_reads/{{sample}}/{{sample}}.compete_records.tsv",
+        fastq=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.gz",
+        stats=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv",
+        records=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.compete_records.tsv",
     log:
-        f"{LOG_DIR}/contaminant_compete/{{sample}}.log",
+        f"{EXP_LOG_DIR}/contaminant_compete/{{sample}}.log",
     conda:
         "../envs/python.yaml"
     shell:

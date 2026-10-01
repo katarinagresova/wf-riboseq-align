@@ -21,13 +21,13 @@ rule fastqc_ribo_raw:
     input:
         fastq=lambda wc: samples.loc[wc.sample, "fastq_1"],
     output:
-        html=f"{RESULTS_DIR}/fastqc/ribo_raw/{{sample}}_fastqc.html",
-        zip=f"{RESULTS_DIR}/fastqc/ribo_raw/{{sample}}_fastqc.zip",
+        html=f"{EXP_DIR}/fastqc/ribo_raw/{{sample}}_fastqc.html",
+        zip=f"{EXP_DIR}/fastqc/ribo_raw/{{sample}}_fastqc.zip",
     params:
         name="{sample}",
-        tmp=f"{RESULTS_DIR}/fastqc/ribo_raw/{{sample}}_tmp",
+        tmp=f"{EXP_DIR}/fastqc/ribo_raw/{{sample}}_tmp",
     log:
-        f"{LOG_DIR}/fastqc/ribo_raw/{{sample}}.log",
+        f"{EXP_LOG_DIR}/fastqc/ribo_raw/{{sample}}.log",
     conda:
         "../envs/fastqc.yaml"
     shell:
@@ -38,15 +38,15 @@ rule fastqc_rna_raw:
     input:
         fastq=lambda wc: samples.loc[wc.sample, f"fastq_{wc.mate}"],
     output:
-        html=f"{RESULTS_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.html",
-        zip=f"{RESULTS_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.zip",
+        html=f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.html",
+        zip=f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.zip",
     wildcard_constraints:
         mate="[12]",
     params:
         name="{sample}_R{mate}",
-        tmp=f"{RESULTS_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_tmp",
+        tmp=f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_tmp",
     log:
-        f"{LOG_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}.log",
+        f"{EXP_LOG_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}.log",
     conda:
         "../envs/fastqc.yaml"
     shell:
@@ -55,15 +55,15 @@ rule fastqc_rna_raw:
 
 rule fastqc_ribo_trimmed:
     input:
-        fastq=f"{RESULTS_DIR}/trim_reads/{{sample}}.fastq.gz",
+        fastq=f"{EXP_DIR}/trim_reads/{{sample}}.fastq.gz",
     output:
-        html=f"{RESULTS_DIR}/fastqc/ribo_trimmed/{{sample}}_fastqc.html",
-        zip=f"{RESULTS_DIR}/fastqc/ribo_trimmed/{{sample}}_fastqc.zip",
+        html=f"{EXP_DIR}/fastqc/ribo_trimmed/{{sample}}_fastqc.html",
+        zip=f"{EXP_DIR}/fastqc/ribo_trimmed/{{sample}}_fastqc.zip",
     params:
         name="{sample}",
-        tmp=f"{RESULTS_DIR}/fastqc/ribo_trimmed/{{sample}}_tmp",
+        tmp=f"{EXP_DIR}/fastqc/ribo_trimmed/{{sample}}_tmp",
     log:
-        f"{LOG_DIR}/fastqc/ribo_trimmed/{{sample}}.log",
+        f"{EXP_LOG_DIR}/fastqc/ribo_trimmed/{{sample}}.log",
     conda:
         "../envs/fastqc.yaml"
     shell:

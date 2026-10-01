@@ -55,6 +55,7 @@ simply (nearly) empty. `filtered` needs `read_type=rna` rows in `samples.csv`.
 | `read_type` | `ribo` or `rna` |
 | `fastq_1` | fastq.gz (R1 for RNA-seq) |
 | `fastq_2` | R2 fastq.gz for RNA-seq; empty for Ribo-seq |
+| `experiment` | optional: run several experiments at once (see Outputs). `sample_id` must be unique across them |
 
 `config/config.yaml` contains `mode`, the cutadapt parameters, the contaminant fasta, the human transcriptome
 fasta + gtf, the spike-in transcriptome fasta, `min_spike_in_fraction`, and the `autofilter` thresholds. Every key is commented in the file.
@@ -78,6 +79,10 @@ star/, filter_reads/, ...                            intermediates, incl. STAR L
 
 Per-step logs are written to `LOG_DIR` (default `logs/`). `logs/collapse_reads/` holds read counts, read-length
 distributions and base composition.
+
+With an `experiment` column, each experiment gets all of the above to itself, in `RESULTS_DIR/<experiment>/` and
+`LOG_DIR/<experiment>/`: its own `filtered` reference (from its own RNA-seq), its own indexes and its own
+`qc/summary.tsv`. Without it, the whole of `samples.csv` is one experiment, directly in `RESULTS_DIR`.
 
 ## Setup
 
@@ -124,9 +129,10 @@ module align:
 use rule * from align as align_*
 ```
 
-Use a different `RESULTS_DIR` for each experiment (for example `results/align/eIF4E_4h`): the `filtered` reference is
-built per run. Relative paths in the `align` block are resolved from the importing workflow's directory. Its rules
-can then consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
+For several experiments, import it once with an `experiment` column in its `samples.csv` (with `RESULTS_DIR:
+results/align`, experiment `eIF4E_4h` lands in `results/align/eIF4E_4h/`), rather than once per experiment.
+Relative paths in the `align` block are resolved from the importing workflow's directory. Its rules can then
+consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
 
 ## Reproducibility
 
