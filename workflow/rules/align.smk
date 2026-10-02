@@ -51,6 +51,7 @@ rule star_transcript:
         f"{EXP_LOG_DIR}/star/transcriptome/{{sample}}.log",
     params:
         prefix=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_",
+        star_args=RIBO_TRANSCRIPTOME_STAR_ARGS,
     conda:
         "../envs/star.yaml"
     threads: 12
@@ -65,11 +66,7 @@ rule star_transcript:
             --outSAMtype BAM Unsorted \
             --outSAMmode NoQS \
             --outSAMattributes NH NM \
-            --seedSearchLmax 10 \
-            --outFilterMultimapNmax 255 \
-            --outFilterMismatchNmax 2 \
-            --outFilterMultimapScoreRange 0 \
-            --outFilterIntronMotifs RemoveNoncanonical \
+            {params.star_args} \
             --outFileNamePrefix {params.prefix} \
             --readFilesIn {input.fastq} \
             --readFilesCommand zcat

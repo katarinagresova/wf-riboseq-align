@@ -72,6 +72,7 @@ if "contaminant_filter" in config:
 CLEAN_FASTQ = f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.gz"
 
 
+include: "rules/common.smk"
 include: "rules/trim.smk"
 include: "rules/contaminants.smk"
 include: "rules/rnaseq.smk"

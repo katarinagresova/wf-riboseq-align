@@ -110,7 +110,8 @@ rule star_contaminant:
 # The competitive filter: of the reads star_contaminant aligned, put back the
 # ones whose best sense alignment to the transcriptome scores higher than their
 # contaminant alignment (scripts/contaminant_compete.py). The transcriptome STAR
-# call must use star_transcript's parameters, plus the AS attribute.
+# call uses star_transcript's settings (RIBO_TRANSCRIPTOME_STAR_ARGS,
+# common.smk), plus the AS attribute.
 rule contaminant_compete_align:
     input:
         bam=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam",
@@ -121,6 +122,7 @@ rule contaminant_compete_align:
         transcriptome=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz"),
     params:
         prefix=f"{EXP_DIR}/filter_reads/{{sample}}/compete/",
+        star_args=RIBO_TRANSCRIPTOME_STAR_ARGS,
     log:
         f"{EXP_LOG_DIR}/contaminant_compete/{{sample}}.align.log",
     conda:
@@ -146,11 +148,7 @@ rule contaminant_compete_align:
             --outSAMtype BAM Unsorted \
             --outSAMmode NoQS \
             --outSAMattributes NH AS NM \
-            --seedSearchLmax 10 \
-            --outFilterMultimapNmax 255 \
-            --outFilterMismatchNmax 2 \
-            --outFilterMultimapScoreRange 0 \
-            --outFilterIntronMotifs RemoveNoncanonical \
+            {params.star_args} \
             --outFileNamePrefix {params.prefix}transcriptome_ \
             --readFilesIn {output.removed} \
             --readFilesCommand zcat
