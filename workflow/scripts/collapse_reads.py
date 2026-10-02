@@ -1,74 +1,62 @@
 """Collapse identical reads into one record carrying their count.
 
-Port of collapse_reads.pl from the eIF pipeline. fastq on stdin -> fastq on
-stdout, one record per distinct sequence named @<library>_<rank>_x<count>,
-most abundant first (ties in order of first appearance), with the quality
-string of the first occurrence. Read and composition statistics go to stderr.
+Port of collapse_reads.pl from the eIF pipeline. fastq(.gz) -> fastq on stdout,
+one record per distinct sequence named @<library>_<rank>_x<count>, most
+abundant first (ties in order of first appearance), with the quality string of
+the first occurrence. Read and composition statistics go to stderr.
 
-Usage: collapse_reads.py <library> < in.fastq > out.fastq
+Usage: collapse_reads.py <in.fastq.gz> <library> > out.fastq
 """
 import sys
+from collections import Counter
 
-import numpy as np
+import pysam
 
 EDGE = 20
-NTS = b"ACGT"
 
 
-def composition(seqs, from_3prime):
-    """Per-position A/C/G/T fraction over the first EDGE nt from one end."""
-    if from_3prime:
-        block = b"".join(s[::-1][:EDGE].ljust(EDGE, b".") for s in seqs)
-    else:
-        block = b"".join(s[:EDGE].ljust(EDGE, b".") for s in seqs)
-    arr = np.frombuffer(block, dtype=np.uint8).reshape(len(seqs), EDGE)
-    # +1 pseudocount per nucleotide, as in the original
-    total = (arr != ord(".")).sum(axis=0) + len(NTS)
-    return {chr(nt): ((arr == nt).sum(axis=0) + 1) / total for nt in NTS}
+def composition(seqs):
+    """Per-position A/C/G/T fraction over the first EDGE nt of seqs."""
+    # EDGE characters per read (shorter reads padded with "."), so position i
+    # of every read is block[i::EDGE]
+    block = "".join(s[:EDGE].ljust(EDGE, ".") for s in seqs)
+    for i in range(EDGE):
+        column = block[i::EDGE]
+        # +1 pseudocount per nucleotide, as in the original
+        total = len(column) - column.count(".") + 4
+        yield [(column.count(nt) + 1) / total for nt in "ACGT"]
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         sys.exit(__doc__)
-    library = sys.argv[1]
+    fastq, library = sys.argv[1:]
 
-    reads = {}
-    lines = (line.rstrip(b"\n") for line in sys.stdin.buffer)
-    lines = (line for line in lines if line.strip())
-    for _name, seq, _plus, qual in zip(lines, lines, lines, lines):
-        seq = seq.upper()
-        entry = reads.get(seq)
-        if entry is None:
-            reads[seq] = [1, qual]
-        else:
-            entry[0] += 1
+    counts, qual = Counter(), {}
+    for read in pysam.FastxFile(fastq):
+        counts[read.sequence] += 1
+        qual.setdefault(read.sequence, read.quality)
 
-    ranked = sorted(reads.items(), key=lambda item: -item[1][0])
-    out = sys.stdout.buffer
-    prefix = f"@{library}_".encode()
-    for rank, (seq, (count, qual)) in enumerate(ranked):
-        out.write(b"%s%d_x%d\n%s\n+\n%s\n" % (prefix, rank, count, seq, qual))
+    # most_common() sorts stably: ties stay in order of first appearance
+    for rank, (seq, count) in enumerate(counts.most_common()):
+        sys.stdout.write(f"@{library}_{rank}_x{count}\n{seq}\n+\n{qual[seq]}\n")
 
-    raw_len = dict.fromkeys(range(15, 77), 0)
-    uniq_len = dict.fromkeys(range(15, 77), 0)
-    for seq, (count, _qual) in reads.items():
-        raw_len[len(seq)] = raw_len.get(len(seq), 0) + count
-        uniq_len[len(seq)] = uniq_len.get(len(seq), 0) + 1
+    raw_len, uniq_len = Counter(), Counter()
+    for seq, count in counts.items():
+        raw_len[len(seq)] += count
+        uniq_len[len(seq)] += 1
 
-    seqs = list(reads)
     err = sys.stderr
     err.write(f">read statistics\n#property\tcounts_{library}\n"
-              f"input\t{sum(raw_len.values())}\nuniq\t{len(reads)}\n\n")
-    for title, sign, from_3prime in (("5'", "", False), ("3'", "-", True)):
-        if title == "3'":
-            err.write("\n")
-        freq = composition(seqs, from_3prime)
-        err.write(f">nt satistics from {title}end\n## --col_stack=A,C,G,T\n#pos\tA\tC\tG\tT\n")
-        for i in range(EDGE):
-            err.write(f"{sign}{i}" + "".join("\t%.3f" % freq[nt][i] for nt in "ACGT") + "\n")
+              f"input\t{counts.total()}\nuniq\t{len(counts)}\n")
+    for end, sign, seqs in (("5'", "", counts), ("3'", "-", (s[::-1] for s in counts))):
+        err.write(f"\n>nt satistics from {end}end\n## --col_stack=A,C,G,T\n#pos\tA\tC\tG\tT\n")
+        for i, freq in enumerate(composition(seqs)):
+            err.write(f"{sign}{i}" + "".join(f"\t{f:.3f}" for f in freq) + "\n")
     for title, lengths in (("raw", raw_len), ("unique", uniq_len)):
         err.write(f"\n>read_lengths_{title}\n## --cumsum --steps\n#length\t{library}\n")
-        for length in sorted(lengths):
+        # lengths 15-76 always, others only if seen
+        for length in sorted(set(range(15, 77)) | lengths.keys()):
             err.write(f"{length}\t{lengths[length]}\n")
 
 
