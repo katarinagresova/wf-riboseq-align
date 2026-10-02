@@ -50,13 +50,17 @@ rule collapse_reads:
 
 rule trim_reads:
     input:
-        fastq=f"{EXP_DIR}/collapse_reads/{{sample}}.fastq.gz",
-        script=workflow.source_path("../scripts/remove_randomers.py"),
+        f"{EXP_DIR}/collapse_reads/{{sample}}.fastq.gz",
     output:
         f"{EXP_DIR}/trim_reads/{{sample}}.fastq.gz",
     log:
         f"{EXP_LOG_DIR}/trim_reads/{{sample}}.log",
     conda:
-        "../envs/python.yaml"
+        "../envs/cutadapt.yaml"
+    threads: 4
     shell:
-        "zcat {input.fastq} | python {input.script} 2> {log} | gzip > {output}"
+        # Cut the 4 nt randomer off both ends of each read and keep both in
+        # the read name, e.g. read "r" starting with ACCG and ending with TATA
+        # becomes "r_ACCG:TATA".
+        "cutadapt --cores {threads} -u 4 -u -4 "
+        "--rename '{{header}}_{{cut_prefix}}:{{cut_suffix}}' -o {output} {input} > {log} 2>&1"
