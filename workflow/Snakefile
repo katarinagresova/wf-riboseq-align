@@ -1,76 +1,7 @@
 # Ribo-seq fastq -> transcriptome-aligned BAM, split into human / spike-in,
 # plus matched total RNA-seq -> salmon quant. Runs standalone or as a module.
 
-import re
-
-import pandas as pd
-
 configfile: "config/config.yaml"
-
-RESULTS_DIR = config.get("RESULTS_DIR", "results")
-LOG_DIR = config.get("LOG_DIR", "logs")
-
-samples = pd.read_csv(config["samples"], dtype=str).set_index("sample_id", drop=False)
-if samples.index.duplicated().any():
-    raise ValueError(f"samples.csv: duplicate sample_id {sorted(set(samples.index[samples.index.duplicated()]))}")
-
-# Optional `experiment` column: several experiments in one run. Each gets its
-# own outputs, incl. its own RNA-seq-filtered reference, under
-# {RESULTS_DIR}/{experiment}/ (logs under {LOG_DIR}/{experiment}/). Without the
-# column the run is one experiment, directly in RESULTS_DIR / LOG_DIR. The
-# experiment-independent outputs (contaminant set and index, unfiltered RNA-seq
-# index) are always directly in RESULTS_DIR (reference/, star_index/) and
-# LOG_DIR (star/), so they are built once.
-if "experiment" in samples.columns:
-    if samples["experiment"].isna().any() or samples["experiment"].str.contains("/").any():
-        raise ValueError("samples.csv: every row needs an experiment, and an experiment cannot contain '/'")
-    EXPERIMENTS = sorted(set(samples["experiment"]))
-    if set(EXPERIMENTS) & {"reference", "star_index", "star"}:
-        raise ValueError("samples.csv: experiments cannot be named reference, star_index or star "
-                         "(the shared outputs' directories)")
-    EXP_DIR = f"{RESULTS_DIR}/{{experiment}}"
-    EXP_LOG_DIR = f"{LOG_DIR}/{{experiment}}"
-
-    wildcard_constraints:
-        experiment="|".join(re.escape(e) for e in EXPERIMENTS),
-else:
-    EXPERIMENTS = [None]
-    EXP_DIR = RESULTS_DIR
-    EXP_LOG_DIR = LOG_DIR
-
-
-def experiment_samples(experiment, read_type):
-    """One experiment's sample_ids of one read type (None: the whole run), in samples.csv order."""
-    sub = samples if experiment is None else samples[samples["experiment"] == experiment]
-    return list(sub.loc[sub["read_type"] == read_type, "sample_id"])
-
-
-def experiment_files(pattern, experiment, read_type, **wildcards):
-    """`pattern` expanded over one experiment's samples of one read type."""
-    if experiment is not None:
-        wildcards["experiment"] = experiment
-    return expand(pattern, sample=experiment_samples(experiment, read_type), **wildcards)
-
-
-MODE = config["mode"]
-if MODE == "filtered":
-    no_rna = [e for e in EXPERIMENTS if not experiment_samples(e, "rna")]
-    if no_rna:
-        raise ValueError("mode 'filtered' builds the ribo reference from the RNA-seq, "
-                         "but samples.csv has no read_type=rna rows"
-                         + ("" if no_rna == [None] else f" for experiment(s) {no_rna}"))
-    HUMAN_TRANSCRIPTOME_FA = f"{EXP_DIR}/reference/human_transcriptome.rnaseq_filtered.fa"
-elif MODE == "unfiltered":
-    HUMAN_TRANSCRIPTOME_FA = config["human_transcriptome_fa"]
-else:
-    raise ValueError(f"config 'mode' must be 'filtered' or 'unfiltered', got {MODE!r}")
-
-# What star_transcript maps: star_contaminant's clean fastq plus the reads
-# contaminant_compete puts back.
-if "contaminant_filter" in config:
-    raise ValueError("config 'contaminant_filter' was removed: the competitive contaminant filter always runs")
-CLEAN_FASTQ = f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.gz"
-
 
 include: "rules/common.smk"
 include: "rules/trim.smk"
