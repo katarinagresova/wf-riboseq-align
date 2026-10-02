@@ -97,3 +97,15 @@ CONTAMINANT_STAR_ARGS = (
     "--alignIntronMax 1 "
     "--alignEndsType Extend5pOfRead1"
 )
+
+
+# bowtie_align: forward strand only (stranded libraries), end to end with at
+# most 2 mismatches, up to 256 alignments per read, best first, in input order
+# (the same output for any thread count). 256 in the best stratum = more than
+# 255 loci: assign_reads.py drops the read as too_many_loci.
+BOWTIE_ARGS = "-v 2 --norc -k 256 --best --reorder"
+# A read shorter than SHORT_READ_LENGTH keeps only its alignments with at most
+# SHORT_READ_MISMATCHES mismatches. 2 = no cap, until it is chosen
+# (PLAN_BOWTIE.md V3).
+SHORT_READ_LENGTH = 23
+SHORT_READ_MISMATCHES = 2

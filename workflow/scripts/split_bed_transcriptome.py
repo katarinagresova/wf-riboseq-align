@@ -1,52 +1,42 @@
-"""Split the transcriptome STAR index into human / spike-in BED files by name.
+"""Write the human / spike-in BED files: one line per transcript of each fasta, over its whole length.
 
-Replaces the count-and-position split in split_bed_transcriptome (align.smk),
-which assumed spike-in was appended last to the index. Here each index
-reference is looked up by name in the human and spike-in fastas instead, so a
-fasta with the right count but wrong content can't pass silently.
+split_bam_transcriptome keeps the reads on one BED's transcripts. A name in both fastas is an error
+(bowtie_index checks that too): its reads could not be told apart.
 
-Usage: split_bed_transcriptome.py <chrom_sizes> <human_fa> <spike_in_fa> <human_bed> <spike_in_bed>
+Usage: split_bed_transcriptome.py <human_fa> <spike_in_fa> <human_bed> <spike_in_bed>
 """
 import sys
 
 
-def fasta_names(path):
+def fasta_lengths(path):
+    lengths = {}
     with open(path) as f:
-        return [line[1:].split()[0] for line in f if line.startswith(">")]
+        for line in f:
+            if line.startswith(">"):
+                name = line[1:].split()[0]
+                if name in lengths:
+                    sys.exit(f"{path}: transcript name {name} twice")
+                lengths[name] = 0
+            else:
+                lengths[name] += len(line.strip())
+    return lengths
 
 
 def main():
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 5:
         sys.exit(__doc__)
-    chrom_sizes, human_fa, spike_in_fa, human_bed, spike_in_bed = sys.argv[1:]
+    human_fa, spike_in_fa, human_bed, spike_in_bed = sys.argv[1:]
 
-    human_set = set(fasta_names(human_fa))
-    spike_in_set = set(fasta_names(spike_in_fa))
-
-    dup = human_set & spike_in_set
+    human = fasta_lengths(human_fa)
+    spike_in = fasta_lengths(spike_in_fa)
+    dup = human.keys() & spike_in.keys()
     if dup:
-        sys.exit(f"{len(dup)} transcript name(s) in both {human_fa} and {spike_in_fa}, "
-                  f"e.g. {next(iter(dup))}")
+        sys.exit(f"{len(dup)} transcript name(s) in both {human_fa} and {spike_in_fa}, e.g. {next(iter(dup))}")
 
-    seen = set()
-    with open(chrom_sizes) as src, \
-            open(human_bed, "w") as human_out, \
-            open(spike_in_bed, "w") as spike_in_out:
-        for line in src:
-            name, length = line.rstrip("\n").split("\t")
-            if name in human_set:
-                out = human_out
-            elif name in spike_in_set:
-                out = spike_in_out
-            else:
-                sys.exit(f"index reference {name!r} is in neither fasta")
-            out.write(f"{name}\t0\t{length}\n")
-            seen.add(name)
-
-    missing = (human_set | spike_in_set) - seen
-    if missing:
-        sys.exit(f"{len(missing)} fasta transcript(s) missing from the index, "
-                  f"e.g. {next(iter(missing))}")
+    for lengths, bed in ((human, human_bed), (spike_in, spike_in_bed)):
+        with open(bed, "w") as out:
+            for name, length in lengths.items():
+                out.write(f"{name}\t0\t{length}\n")
 
 
 if __name__ == "__main__":
