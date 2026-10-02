@@ -1,5 +1,5 @@
 # Ribo-seq read pre-processing: adapter trim -> UMI-aware collapse -> strip the
-# 4+4 nt randomers. RNA-seq reads go to salmon untrimmed (rnaseq.smk).
+# 4+4 nt randomers.
 
 
 rule cutadapt_reads:

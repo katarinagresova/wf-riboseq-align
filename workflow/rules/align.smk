@@ -1,16 +1,18 @@
 # Ribo-seq: map contaminant-free reads to human + spike-in transcriptome, then
-# split the BAM by species. HUMAN_TRANSCRIPTOME_FA is the only thing `mode`
-# changes: the RNA-seq-filtered fasta, or the configured one as is.
+# split the BAM by species.
+#
+# The reference and its index do not depend on the experiment: they live in
+# RESULTS_DIR, not EXP_DIR, so a multi-experiment run builds them once.
 
 
 rule combined_transcriptome:
     input:
-        human=HUMAN_TRANSCRIPTOME_FA,
+        human=config["human_transcriptome_fa"],
         spike_in=config["spike_in_transcriptome_fa"],
     output:
-        f"{EXP_DIR}/reference/transcriptome.combined_human_spike_in.fa",
+        f"{RESULTS_DIR}/reference/transcriptome.combined_human_spike_in.fa",
     log:
-        f"{EXP_LOG_DIR}/align/combined_transcriptome.log",
+        f"{LOG_DIR}/combined_transcriptome.log",
     conda:
         "../envs/coreutils.yaml"
     shell:
@@ -19,14 +21,14 @@ rule combined_transcriptome:
 
 rule star_transcript_index:
     input:
-        f"{EXP_DIR}/reference/transcriptome.combined_human_spike_in.fa",
+        f"{RESULTS_DIR}/reference/transcriptome.combined_human_spike_in.fa",
     output:
-        index=directory(f"{EXP_DIR}/star_index/transcriptome"),
-        chrom_sizes=f"{EXP_DIR}/star_index/transcriptome/chrNameLength.txt",
+        index=directory(f"{RESULTS_DIR}/star_index/transcriptome"),
+        chrom_sizes=f"{RESULTS_DIR}/star_index/transcriptome/chrNameLength.txt",
     log:
-        f"{EXP_LOG_DIR}/star/transcriptome_index.log",
+        f"{LOG_DIR}/star/transcriptome_index.log",
     params:
-        log_prefix=f"{EXP_LOG_DIR}/star/transcriptome_index.",
+        log_prefix=f"{LOG_DIR}/star/transcriptome_index.",
     conda:
         "../envs/star.yaml"
     threads: 8
@@ -44,7 +46,7 @@ rule star_transcript_index:
 rule star_transcript:
     input:
         fastq=CLEAN_FASTQ,
-        index=f"{EXP_DIR}/star_index/transcriptome",
+        index=f"{RESULTS_DIR}/star_index/transcriptome",
     output:
         bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
         log_final=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_Log.final.out",
@@ -79,15 +81,15 @@ rule star_transcript:
 
 rule split_bed_transcriptome:
     input:
-        chrom_sizes=f"{EXP_DIR}/star_index/transcriptome/chrNameLength.txt",
-        human_fa=HUMAN_TRANSCRIPTOME_FA,
+        chrom_sizes=f"{RESULTS_DIR}/star_index/transcriptome/chrNameLength.txt",
+        human_fa=config["human_transcriptome_fa"],
         spike_in_fa=config["spike_in_transcriptome_fa"],
         script=workflow.source_path("../scripts/split_bed_transcriptome.py"),
     output:
-        human=f"{EXP_DIR}/reference/transcripts.human.bed",
-        spike_in=f"{EXP_DIR}/reference/transcripts.spike_in.bed",
+        human=f"{RESULTS_DIR}/reference/transcripts.human.bed",
+        spike_in=f"{RESULTS_DIR}/reference/transcripts.spike_in.bed",
     log:
-        f"{EXP_LOG_DIR}/align/split_bed_transcriptome.log",
+        f"{LOG_DIR}/split_bed_transcriptome.log",
     conda:
         "../envs/python.yaml"
     shell:
@@ -98,7 +100,7 @@ rule split_bed_transcriptome:
 rule split_bam_transcriptome:
     input:
         bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
-        bed=f"{EXP_DIR}/reference/transcripts.{{species}}.bed",
+        bed=f"{RESULTS_DIR}/reference/transcripts.{{species}}.bed",
     output:
         bam=f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam",
         bai=f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",

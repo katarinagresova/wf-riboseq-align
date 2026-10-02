@@ -5,16 +5,6 @@ samples: "config/samples.csv"
 RESULTS_DIR: "results"
 LOG_DIR: "logs"
 
-# Which human transcriptome the Ribo-seq reads are mapped to (the spike-in
-# transcriptome is always appended). Default, and the right choice unless you
-# have a specific reason not to prune unexpressed transcripts:
-#   filtered   - drop transcripts the matched RNA-seq does not express (see
-#                `autofilter`), per run. Needs read_type=rna rows in
-#                samples.csv.
-# Opt out explicitly if you don't want that pruning (e.g. no matched RNA-seq):
-#   unfiltered - human_transcriptome_fa as is.
-mode: "filtered"
-
 # Ribo-seq adapter trimming (cutadapt_reads). minlength / maxlength are of the
 # insert, i.e. the read without its 4+4 nt randomers (cutadapt gets them + 8).
 adapter: "TGGAATTCTCGGGTGCCAAGG"
@@ -28,22 +18,12 @@ qualcutoff: 20
 # clean read (contaminant_compete). A tie stays discarded.
 contaminants_fa: "/path/to/contaminants.fa"
 
-# Transcriptomes. Every read type is mapped / quantified on these.
+# Transcriptomes. The Ribo-seq reads are mapped to both at once (human +
+# spike-in), then split by species.
 human_transcriptome_fa: "/path/to/human_transcriptome.fa"
-human_transcriptome_gtf: "/path/to/human_transcriptome.gtf"
 spike_in_transcriptome_fa: "/path/to/yeast_transcriptome.fa"
-# The genome of the human transcriptome (uncompressed fasta). Only salmon's
-# decoys: an RNA-seq fragment that aligns better to it than to any transcript
-# (e.g. intronic) is counted for none.
-human_genome_fa: "/path/to/human_genome.fa"
 
 # qc_summary fails if any Ribo-seq library has a lower spike-in fraction
 # (spike-in-only reads / all mapped reads). Set 0 for libraries without a
 # spike-in (e.g. HarrPurr).
 min_spike_in_fraction: 0.01
-
-# mode "filtered" only: keep a transcript if TPM >= min_tpm in >= min_samples
-# RNA-seq libraries (filter_rnaseq)
-autofilter:
-  min_tpm: 0.01
-  min_samples: 2

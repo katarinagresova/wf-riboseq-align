@@ -1,5 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-description: One row of samples.csv. Other columns are allowed and ignored.
+description: >-
+  One row of samples.csv. Other columns are allowed and ignored, and so are read_type rna rows (checked, not used:
+  an importing workflow can pass the samples.csv it quantifies its RNA-seq from).
 type: object
 properties:
   sample_id:
@@ -14,11 +16,10 @@ properties:
   experiment:
     type: string
     description: >-
-      optional column. Not reference, star_index, star or salmon_index: the experiment-independent outputs'
-      directories
+      optional column. Not reference, star_index or star: the experiment-independent outputs' directories
     pattern: "^[^/]+$"
     not:
-      enum: [reference, star_index, star, salmon_index]
+      enum: [reference, star_index, star]
 required: [sample_id, read_type, fastq_1]
 if:
   properties:

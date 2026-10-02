@@ -1,32 +1,28 @@
 # wf-riboseq-align
 
 A Snakemake workflow that takes raw Ribo-seq fastq files to **transcriptome-aligned BAM files**, split into the human
-reads and the spike-in reads. It also quantifies the matched total RNA-seq with salmon. It is a generalised,
-reproducible port of an existing lab Ribo-seq alignment pipeline. It can be run on its own or imported into another
-Snakemake workflow.
+reads and the spike-in reads. It is a generalised, reproducible port of an existing lab Ribo-seq alignment pipeline.
+It can be run on its own or imported into another Snakemake workflow. The original pipeline also quantified the
+matched RNA-seq and mapped the Ribo-seq only to the transcripts expressed there. Here the Ribo-seq maps to the whole
+transcriptome, so the alignment does not depend on the RNA-seq; the RNA-seq quantification and the expression filter
+(applied when counting) are in wf-eIF-deltaTE.
 
 ## What it does
 
 ```mermaid
 %%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 30}}}%%
 flowchart TD
-    rna[/"<b>RNA-seq fastq<br>(R1, R2)</b>"/]
-    genome[/"human_genome_fa"/]
-    human[/"human_transcriptome_fa<br>+ gtf"/]
+    human[/"human_transcriptome_fa"/]
     spike[/"spike_in_<br>transcriptome_fa"/]
     contam_fa[/"contaminants_fa"/]
     ribo[/"<b>Ribo-seq fastq</b>"/]
 
-    salmon["<b>RNA-seq quantification</b><br>salmon_gentrome,<br>salmon_index, salmon_quant"]
-    filter["<b>Expression filter</b><br>(mode filtered)<br>filter_rnaseq,<br>make_filtered_resources,<br>filter_quant"]
     ref["<b>Ribo-seq reference</b><br>combined_transcriptome,<br>star_transcript_index,<br>split_bed_transcriptome"]
     trim["<b>Ribo-seq preprocessing</b><br>cutadapt_reads,<br>collapse_reads, trim_reads"]
     contam["<b>Contaminant filter</b><br>number_contaminants,<br>star_contaminant_index,<br>star_contaminant,<br>contaminant_compete_align,<br>contaminant_compete"]
     align["<b>Ribo-seq alignment</b><br>star_transcript,<br>split_bam_transcriptome"]
     qc["<b>Read counts</b><br>qc_library, qc_summary"]
 
-    quant(["salmon/*/quant.sf"])
-    quant_filtered(["salmon/*/<br>quant.rnaseq_filtered.sf"])
     bams(["split_bam/transcriptome/<br>{human,spike_in}/*.bam"])
     summary(["qc/summary.tsv"])
 
@@ -43,37 +39,21 @@ flowchart TD
     align -->|"BAMs"| qc
     align ---> bams
     qc --> summary
-    human -..->|"fa<br>(mode unfiltered)"| ref
-    filter -->|"filtered fa"| ref
-    human -->|"fa + gtf"| filter
-    salmon -->|"quant.sf"| filter
-    rna --> salmon
-    genome -->|"decoys"| salmon
-    human -->|"fa"| salmon
-    salmon -------> quant
-    filter ------> quant_filtered
+    human ----> ref
 
     classDef riboInput fill:#1f78b4,stroke:#0b3c5d,stroke-width:3px,color:#fff
-    classDef rnaInput fill:#e66101,stroke:#7f3600,stroke-width:3px,color:#fff
     classDef helper fill:#f4f4f4,stroke:#aaa,color:#555
     classDef riboStep fill:#d6e6f5,stroke:#1f78b4,stroke-width:2px,color:#000
-    classDef rnaStep fill:#fde0c5,stroke:#e66101,stroke-width:2px,color:#000
     class ribo riboInput
-    class rna rnaInput
-    class contam_fa,spike,human,genome helper
+    class contam_fa,spike,human helper
     class trim,contam,ref,align,qc,bams,summary riboStep
-    class salmon,filter,quant,quant_filtered rnaStep
-    linkStyle 12,14,15,18,19 stroke:#e66101,stroke-width:2.5px
     linkStyle 0,1,5,7,8,9,10 stroke:#1f78b4,stroke-width:2.5px
-    linkStyle 2,3,4,6,11,13,16,17 stroke:#999
+    linkStyle 2,3,4,6,11 stroke:#999
 ```
 
-Blue is the Ribo-seq path, orange the RNA-seq path. The two bold inputs are the fastqs in `samples.csv`, the grey
-ones the references in `config.yaml`; square boxes are groups of rules, rounded boxes the main outputs (see
-Outputs). `mode` (default `filtered`, see config.yaml) decides which human transcripts the Ribo-seq reads map to:
-`filtered` builds the reference from the RNA-seq path too (`filtered fa`), and needs `read_type=rna` rows in
-`samples.csv`; `unfiltered` is an explicit opt-out that skips the expression filter and maps to the whole
-transcriptome (dotted arrow). Not shown: FastQC and MultiQC, which report on the fastqs and every step's log.
+The bold input is the fastqs in `samples.csv`, the grey ones the references in `config.yaml`; square boxes are groups
+of rules, rounded boxes the main outputs (see Outputs). Not shown: FastQC and MultiQC, which report on the fastqs
+and every step's log.
 
 Ribo-seq (single-end, with 4+4 nt randomers around the insert):
 
@@ -94,13 +74,9 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
    all mapped). Reads aligned to both species stay in both BAM files and are only counted. The run fails if any
    library's spike-in fraction is below `min_spike_in_fraction` (default 0.01; set 0 for libraries without spike-in)
 
-Total RNA-seq (paired-end): quantify on the human transcriptome with `salmon quant` (selective alignment, with
-sequence and GC bias correction), the genome as decoys: a fragment that aligns better to the genome than to any
-transcript, e.g. from an intron, is counted for none.
-
-FastQC (`fastqc_ribo_raw`, `fastqc_rna_raw`, `fastqc_ribo_trimmed`): reports on the raw Ribo-seq fastqs, the raw
-RNA-seq fastqs (R1 and R2 separately), and the trimmed Ribo-seq reads that `star_contaminant` maps (the output of
-step 3). Those trimmed reads are already collapsed, so their duplication plot says nothing about PCR duplicates.
+FastQC (`fastqc_ribo_raw`, `fastqc_ribo_trimmed`): reports on the raw Ribo-seq fastqs and the trimmed reads that
+`star_contaminant` maps (the output of step 3). Those trimmed reads are already collapsed, so their duplication plot
+says nothing about PCR duplicates.
 
 ## Inputs
 
@@ -108,15 +84,14 @@ step 3). Those trimmed reads are already collapsed, so their duplication plot sa
 
 | column | |
 |---|---|
-| `sample_id` | free label, used in output names. It also becomes the read-name prefix of Ribo-seq reads |
-| `read_type` | `ribo` or `rna` |
-| `fastq_1` | fastq.gz (R1 for RNA-seq) |
-| `fastq_2` | R2 fastq.gz for RNA-seq; empty for Ribo-seq |
+| `sample_id` | free label, used in output names. It also becomes the read-name prefix of the reads |
+| `read_type` | `ribo`. `rna` rows (paired-end RNA-seq) are checked, then skipped, so a workflow that imports this one can pass the same `samples.csv` |
+| `fastq_1` | fastq.gz (R1 for `rna` rows) |
+| `fastq_2` | R2 fastq.gz for `rna` rows; empty or no column for `ribo` |
 | `experiment` | optional: run several experiments at once (see Outputs). `sample_id` must be unique across them |
 
-`config/config.yaml` contains `mode`, the cutadapt parameters, the contaminant fasta, the human transcriptome
-fasta + gtf and its genome fasta, the spike-in transcriptome fasta, `min_spike_in_fraction`, and the `autofilter`
-thresholds. Every key is commented in the file. Fill in the placeholder paths with your own data and references
+`config/config.yaml` contains the cutadapt parameters, the contaminant fasta, the human and the spike-in
+transcriptome fasta, and `min_spike_in_fraction`. Every key is commented in the file. Fill in the placeholder paths with your own data and references
 before running. The workflow checks both files against [workflow/schemas/](workflow/schemas/) when it starts, so a
 misspelt config key is an error.
 
@@ -125,16 +100,11 @@ misspelt config key is an error.
 ```
 split_bam/transcriptome/human/<sample>.bam(.bai)     Ribo-seq, human transcripts
 split_bam/transcriptome/spike_in/<sample>.bam(.bai)  Ribo-seq, spike-in reads
-salmon/<sample>/quant.sf                             RNA-seq quantification
-salmon/<sample>/quant.rnaseq_filtered.sf             (mode filtered) the same, blacklisted transcripts dropped
 qc/<sample>.stats.tsv, qc/summary.tsv                Ribo-seq read counts per library (collapsed reads)
 fastqc/{ribo_raw,ribo_trimmed}/<sample>_fastqc.{html,zip}   FastQC, Ribo-seq before and after trimming
-fastqc/rna_raw/<sample>_R{1,2}_fastqc.{html,zip}              FastQC, raw RNA-seq
-multiqc/multiqc_report.html                          MultiQC: cutadapt, each STAR step, salmon, FastQC
+multiqc/multiqc_report.html                          MultiQC: cutadapt, each STAR step, FastQC
 reference/                                           the references these were aligned to
   transcriptome.combined_human_spike_in.fa           (the BAM @SQ lines refer to this)
-  human_transcriptome.rnaseq_filtered.{fa,gtf}       (mode filtered)
-  rnaseq_filter_blacklist_txid.txt                   (mode filtered: the transcripts dropped)
 star/, filter_reads/, ...                            intermediates, incl. STAR Log.final.out
 ```
 
@@ -142,11 +112,10 @@ Per-step logs are written to `LOG_DIR` (default `logs/`). `logs/collapse_reads/`
 distributions and base composition.
 
 With an `experiment` column (as in the example `config/samples.csv`), each experiment gets the above to itself, in
-`RESULTS_DIR/<experiment>/` and `LOG_DIR/<experiment>/`: its own `filtered` reference (from its own RNA-seq), Ribo-seq
-index and `qc/summary.tsv`. What does not depend on the experiment (the contaminant set and its index, the RNA-seq
-salmon index) is built once, in `RESULTS_DIR/reference/`, `RESULTS_DIR/star_index/` and `RESULTS_DIR/salmon_index/`,
-so no experiment can be named `reference`, `star_index`, `star` or `salmon_index`. Without the column, the whole of
-`samples.csv` is one experiment, directly in `RESULTS_DIR`.
+`RESULTS_DIR/<experiment>/` and `LOG_DIR/<experiment>/`, incl. its own `qc/summary.tsv` and MultiQC report. What does
+not depend on the experiment (the references and both STAR indexes: contaminants and transcriptome) is built once, in
+`RESULTS_DIR/reference/` and `RESULTS_DIR/star_index/`, so no experiment can be named `reference`, `star_index` or
+`star`. Without the column, the whole of `samples.csv` is one experiment, directly in `RESULTS_DIR`.
 
 ## Setup
 
@@ -182,17 +151,15 @@ Both wrappers activate the `snake` conda env. To use your own config: `./snakema
 
 `.test/` holds a tiny synthetic dataset: random sequences written by `.test/make_data.py`, not real reads. It is
 built so that every step has something to do: PCR duplicates, adapter dimers, contaminant reads, reads on two
-contaminants, reads that tie with or beat their contaminant alignment, reads in both species' BAMs, transcripts
-without RNA-seq reads (for the blacklist), pre-mRNA reads (for salmon's decoys), and two experiments. The whole
-workflow runs on it in a few minutes:
+contaminants, reads that tie with or beat their contaminant alignment, reads in both species' BAMs, two experiments,
+and `rna` rows (skipped). The whole workflow runs on it in a few minutes:
 
 ```bash
 snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
 ```
 
 CI ([.github/workflows/test.yaml](.github/workflows/test.yaml)) runs lint, a dry run and this run on every push to
-`main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads or salmon
-assigns no fragment to a decoy.
+`main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads.
 
 ## Use it from another workflow
 
@@ -216,12 +183,12 @@ consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
 
 ## Reproducibility
 
-- Every rule has a conda env with exact version pins. STAR 2.7.10b, samtools 1.17 and salmon 1.10.2 are the versions
-  in the original pipeline's container.
+- Every rule has a conda env with exact version pins. STAR 2.7.10b and samtools 1.17 are the versions in the original
+  pipeline's container.
 - cutadapt is 5.2 on Python 3.13, because no cutadapt build exists for Python 3.14 yet. On a 2M-read test library
   its output is byte-identical to 4.4, the container's version, which in turn reproduces the original pipeline's
   trimmed reads exactly.
 - The helper scripts are Python (3.14) ports of the original pipeline's Perl and R scripts. Each was checked against
   the original, or against the original pipeline's saved output, on real data. All gave identical output: the
-  numbered contaminant fasta, the RNA-seq blacklist (1,673 transcripts), the filtered fasta and gtf, the collapse
-  statistics (41.1M → 12.4M reads), the collapsed reads themselves, and the randomer trimming.
+  numbered contaminant fasta, the collapse statistics (41.1M → 12.4M reads), the collapsed reads themselves, and the
+  randomer trimming.

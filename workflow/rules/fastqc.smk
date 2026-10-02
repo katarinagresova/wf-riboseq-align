@@ -1,7 +1,6 @@
-# FastQC at three points: raw Ribo-seq, raw RNA-seq (R1 and R2 separately),
-# and the trimmed Ribo-seq that star_contaminant maps (after cutadapt_reads,
-# collapse_reads and trim_reads, so collapsed: its duplication plot is ~flat).
-# Reports only; no rule reads them.
+# FastQC at two points: raw Ribo-seq, and the trimmed Ribo-seq that
+# star_contaminant maps (after cutadapt_reads, collapse_reads and trim_reads,
+# so collapsed: its duplication plot is ~flat). Reports only; no rule reads them.
 #
 # FastQC names its report after the input file, so each job links its fastq
 # into its own tmp dir as <name>.fastq.gz and moves the report out. The tmp dir
@@ -28,25 +27,6 @@ rule fastqc_ribo_raw:
         tmp=f"{EXP_DIR}/fastqc/ribo_raw/{{sample}}_tmp",
     log:
         f"{EXP_LOG_DIR}/fastqc/ribo_raw/{{sample}}.log",
-    conda:
-        "../envs/fastqc.yaml"
-    shell:
-        FASTQC_SHELL
-
-
-rule fastqc_rna_raw:
-    input:
-        fastq=lambda wc: samples.loc[wc.sample, f"fastq_{wc.mate}"],
-    output:
-        html=f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.html",
-        zip=f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.zip",
-    wildcard_constraints:
-        mate="[12]",
-    params:
-        name="{sample}_R{mate}",
-        tmp=f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_tmp",
-    log:
-        f"{EXP_LOG_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}.log",
     conda:
         "../envs/fastqc.yaml"
     shell:

@@ -34,8 +34,3 @@ jobs:
           awk -F'\t' 'FNR == 1 {for (i = 1; i <= NF; i++) col[$i] = i; next}
           !$col["contaminant_multi"] || !$col["both_species"] {print FILENAME ": " $1 " has none"; bad = 1}
           END {exit bad}' .test/results/*/qc/summary.tsv
-      # the pre-mRNA reads: a 0 means salmon's decoys caught nothing
-      - name: Check that salmon assigned fragments to decoys
-        run: >-
-          for f in .test/results/*/salmon/*/aux_info/meta_info.json; do
-          grep -q '"num_decoy_fragments": [1-9]' $f || { echo "$f has none"; exit 1; }; done

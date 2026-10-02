@@ -11,9 +11,6 @@ properties:
   LOG_DIR:
     type: string
     default: logs
-  mode:
-    enum: [filtered, unfiltered]
-    default: filtered
   adapter:
     type: string
   minlength:
@@ -29,30 +26,13 @@ properties:
     type: string
   human_transcriptome_fa:
     type: string
-  human_transcriptome_gtf:
-    type: string
   spike_in_transcriptome_fa:
-    type: string
-  human_genome_fa:
     type: string
   min_spike_in_fraction:
     type: number
     minimum: 0
     maximum: 1
     default: 0.01
-  autofilter:
-    type: object
-    additionalProperties: false
-    properties:
-      min_tpm:
-        type: number
-        minimum: 0
-      min_samples:
-        type: integer
-        minimum: 1
-    required: [min_tpm, min_samples]
-# all rules are parsed in both modes, so the filtered-mode keys are needed in unfiltered mode too.
-# mode is not required: it defaults to filtered: unfiltered is an explicit opt-out.
 required:
   - samples
   - adapter
@@ -61,7 +41,4 @@ required:
   - qualcutoff
   - contaminants_fa
   - human_transcriptome_fa
-  - human_transcriptome_gtf
   - spike_in_transcriptome_fa
-  - human_genome_fa
-  - autofilter

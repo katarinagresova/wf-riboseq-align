@@ -1,12 +1,12 @@
 # Test run on the synthetic data in ../data: random sequences, not real reads
 # (written by ../make_data.py). Run from the repo root:
 #   snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
-# Paths are relative to .test/.
+# Paths are relative to .test/. samples.csv's read_type=rna rows check that the
+# workflow skips them.
 
 samples: "config/samples.csv"
 RESULTS_DIR: "results"
 LOG_DIR: "logs"
-# mode left unset: exercises the schema's default (filtered)
 
 adapter: "TGGAATTCTCGGGTGCCAAGG"
 minlength: 18
@@ -15,12 +15,6 @@ qualcutoff: 20
 
 contaminants_fa: "data/contaminants.fa"
 human_transcriptome_fa: "data/human.fa"
-human_transcriptome_gtf: "data/human.gtf"
 spike_in_transcriptome_fa: "data/yeast.fa"
-human_genome_fa: "data/genome.fa"
 
 min_spike_in_fraction: 0.01
-
-autofilter:
-  min_tpm: 0.01
-  min_samples: 2

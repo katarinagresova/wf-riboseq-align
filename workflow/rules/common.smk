@@ -11,24 +11,25 @@ validate(config, "../schemas/config.schema.yaml")
 RESULTS_DIR = config["RESULTS_DIR"]
 LOG_DIR = config["LOG_DIR"]
 
+# read_type=rna rows are validated, then skipped (every target is of the ribo
+# rows), so an importer can pass the samples.csv it quantifies its RNA-seq from
 samples = pd.read_csv(config["samples"], dtype=str).set_index("sample_id", drop=False)
 validate(samples, "../schemas/samples.schema.yaml")
 if samples.index.duplicated().any():
     raise ValueError(f"samples.csv: duplicate sample_id {sorted(set(samples.index[samples.index.duplicated()]))}")
 
-# {sample} only ever matches a whole sample_id, so a pattern like fastqc's
-# {sample}_R{mate} cannot split one differently
+# {sample} only ever matches a whole sample_id
 wildcard_constraints:
     sample="|".join(re.escape(s) for s in samples.index),
 
 
 # Optional `experiment` column: several experiments in one run. Each gets its
-# own outputs, incl. its own RNA-seq-filtered reference, under
-# {RESULTS_DIR}/{experiment}/ (logs under {LOG_DIR}/{experiment}/). Without the
-# column the run is one experiment, directly in RESULTS_DIR / LOG_DIR. The
-# experiment-independent outputs (contaminant set and index, RNA-seq salmon
-# index) are always directly in RESULTS_DIR (reference/, star_index/,
-# salmon_index/) and LOG_DIR (star/, salmon_index/), so they are built once.
+# own outputs under {RESULTS_DIR}/{experiment}/ (logs under
+# {LOG_DIR}/{experiment}/). Without the column the run is one experiment,
+# directly in RESULTS_DIR / LOG_DIR. The experiment-independent outputs (the
+# contaminant set, the Ribo-seq reference and both STAR indexes) are always
+# directly in RESULTS_DIR (reference/, star_index/) and LOG_DIR (star/), so
+# they are built once.
 if "experiment" in samples.columns:
     if samples["experiment"].isna().any():
         raise ValueError("samples.csv: with an experiment column, every row needs an experiment")
@@ -56,17 +57,6 @@ def experiment_files(pattern, experiment, read_type, **wildcards):
         wildcards["experiment"] = experiment
     return expand(pattern, sample=experiment_samples(experiment, read_type), **wildcards)
 
-
-MODE = config["mode"]
-if MODE == "filtered":
-    no_rna = [e for e in EXPERIMENTS if not experiment_samples(e, "rna")]
-    if no_rna:
-        raise ValueError("mode 'filtered' builds the ribo reference from the RNA-seq, "
-                         "but samples.csv has no read_type=rna rows"
-                         + ("" if no_rna == [None] else f" for experiment(s) {no_rna}"))
-    HUMAN_TRANSCRIPTOME_FA = f"{EXP_DIR}/reference/human_transcriptome.rnaseq_filtered.fa"
-elif MODE == "unfiltered":
-    HUMAN_TRANSCRIPTOME_FA = config["human_transcriptome_fa"]
 
 # What star_transcript maps: star_contaminant's clean fastq plus the reads
 # contaminant_compete puts back.

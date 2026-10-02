@@ -27,13 +27,11 @@ module_order:
       anchor: star_transcript
       path_filters:
         - "*/star/transcriptome/*"
-  - salmon
   - fastqc:
       name: "FastQC: raw"
       anchor: fastqc_raw
       path_filters:
         - "*/fastqc/ribo_raw/*"
-        - "*/fastqc/rna_raw/*"
   - fastqc:
       name: "FastQC: trimmed Ribo-seq"
       anchor: fastqc_trimmed

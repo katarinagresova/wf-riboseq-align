@@ -1,13 +1,11 @@
-# Ribo-seq fastq -> transcriptome-aligned BAM, split into human / spike-in,
-# plus matched total RNA-seq -> salmon quant. Runs standalone or as a module.
+# Ribo-seq fastq -> transcriptome-aligned BAM, split into human / spike-in.
+# Runs standalone or as a module.
 
 configfile: "config/config.yaml"
 
 include: "rules/common.smk"
 include: "rules/trim.smk"
 include: "rules/contaminants.smk"
-include: "rules/rnaseq.smk"
-include: "rules/autofilter.smk"
 include: "rules/align.smk"
 include: "rules/qc.smk"
 include: "rules/fastqc.smk"
@@ -22,12 +20,8 @@ rule all:
                                  species=["human", "spike_in"]),
                 expand(f"{EXP_DIR}/qc/summary.tsv", **({} if e is None else {"experiment": e})),
                 expand(f"{EXP_DIR}/multiqc/multiqc_report.html", **({} if e is None else {"experiment": e})),
-                experiment_files(f"{EXP_DIR}/salmon/{{sample}}/quant.sf", e, "rna"),
-                experiment_files(f"{EXP_DIR}/salmon/{{sample}}/quant.rnaseq_filtered.sf", e, "rna")
-                if MODE == "filtered" else [],
                 experiment_files(f"{EXP_DIR}/fastqc/{{stage}}/{{sample}}_fastqc.html", e, "ribo",
                                  stage=["ribo_raw", "ribo_trimmed"]),
-                experiment_files(f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.html", e, "rna", mate=[1, 2]),
             ]
             for e in EXPERIMENTS
         ],

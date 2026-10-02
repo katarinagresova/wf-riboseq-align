@@ -115,7 +115,7 @@ rule star_contaminant:
 rule contaminant_compete_align:
     input:
         bam=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam",
-        transcriptome_index=f"{EXP_DIR}/star_index/transcriptome",
+        transcriptome_index=f"{RESULTS_DIR}/star_index/transcriptome",
     output:
         removed=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz"),
         contaminant=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz"),
