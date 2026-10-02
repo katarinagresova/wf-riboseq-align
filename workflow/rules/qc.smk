@@ -14,6 +14,8 @@ rule qc_library:
         spike_in=f"{EXP_DIR}/split_bam/transcriptome/spike_in/{{sample}}.bam",
     output:
         f"{EXP_DIR}/qc/{{sample}}.stats.tsv",
+    log:
+        f"{EXP_LOG_DIR}/qc/{{sample}}.log",
     # sort spills here, not to the node's /tmp (filled up on compute nodes)
     params:
         tmp_dir=f"{EXP_DIR}/qc/{{sample}}_tmp_sort",
@@ -21,6 +23,7 @@ rule qc_library:
         "../envs/star.yaml"
     shell:
         r"""
+        exec 2> {log}
         export LC_ALL=C
         star_stat() {{ grep "$1" {input.contam_log} | cut -f2; }}
         input=$(star_stat "Number of input reads")

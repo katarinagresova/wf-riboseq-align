@@ -65,6 +65,8 @@ rule star_contaminant:
         fastq=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.fastq.gz",
         log_final=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
         bam=temp(f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam"),
+    log:
+        f"{EXP_LOG_DIR}/star/contaminant/{{sample}}.log",
     params:
         prefix=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_",
         tmp_dir=f"{EXP_DIR}/filter_reads/{{sample}}/_tmpSTAR",
@@ -75,6 +77,7 @@ rule star_contaminant:
         mem_mb=16000,
     shell:
         r"""
+        exec > {log} 2>&1
         rm -rf {params.tmp_dir}
         STAR \
             --genomeDir {input.index} \

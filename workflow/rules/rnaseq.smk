@@ -41,6 +41,8 @@ rule star_transcript_rnaseq:
         bam=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam",
         bai=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai",
         unsorted_bam=temp(f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam"),
+    log:
+        f"{EXP_LOG_DIR}/star/transcriptome_rnaseq/{{sample}}.log",
     params:
         prefix=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_",
     conda:
@@ -50,6 +52,7 @@ rule star_transcript_rnaseq:
         mem_mb=16000,
     shell:
         r"""
+        exec > {log} 2>&1
         STAR \
             --runThreadN {threads} \
             --genomeDir {input.index} \

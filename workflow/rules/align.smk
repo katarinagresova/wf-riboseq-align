@@ -9,10 +9,12 @@ rule combined_transcriptome:
         spike_in=config["spike_in_transcriptome_fa"],
     output:
         f"{EXP_DIR}/reference/transcriptome.combined_human_spike_in.fa",
+    log:
+        f"{EXP_LOG_DIR}/align/combined_transcriptome.log",
     conda:
         "../envs/coreutils.yaml"
     shell:
-        "cat {input.human} {input.spike_in} > {output}"
+        "cat {input.human} {input.spike_in} > {output} 2> {log}"
 
 
 rule star_transcript_index:
@@ -45,6 +47,8 @@ rule star_transcript:
         index=f"{EXP_DIR}/star_index/transcriptome",
     output:
         f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
+    log:
+        f"{EXP_LOG_DIR}/star/transcriptome/{{sample}}.log",
     params:
         prefix=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_",
     conda:
@@ -54,6 +58,7 @@ rule star_transcript:
         mem_mb=24000,
     shell:
         r"""
+        exec > {log} 2>&1
         STAR \
             --runThreadN {threads} \
             --genomeDir {input.index} \
@@ -101,10 +106,13 @@ rule split_bam_transcriptome:
         bai=f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",
     wildcard_constraints:
         species="human|spike_in",
+    log:
+        f"{EXP_LOG_DIR}/align/split_bam/{{species}}/{{sample}}.log",
     conda:
         "../envs/star.yaml"
     shell:
         r"""
+        exec 2> {log}
         samtools view -b -L {input.bed} {input.bam} > {output.bam}
         samtools index {output.bam}
         """
