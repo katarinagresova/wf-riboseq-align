@@ -11,41 +11,10 @@ latency-wait: 60
 
 # Profile resource values are evaluated as Python, so strings must be
 # inner-quoted ("'normal'"), otherwise they resolve to <TBD>.
+# Per-rule mem_mb is in the rules (resources:), CPUs are the rules' threads:
+# both come along when the workflow is imported as a module.
 default-resources:
   slurm_partition: "'normal'"
   slurm_account: "'your_account'"  # set to your SLURM billing account
   runtime: 240
   mem_mb: 8000
-  cpus_per_task: 1
-
-set-resources:
-  cutadapt_reads:
-    cpus_per_task: 4
-  # holds every distinct read in memory
-  collapse_reads:
-    mem_mb: 16000
-  star_contaminant_index:
-    cpus_per_task: 8
-  star_contaminant:
-    cpus_per_task: 8
-    mem_mb: 16000
-  contaminant_compete_align:
-    cpus_per_task: 8
-    mem_mb: 24000
-  contaminant_compete:
-    mem_mb: 16000
-  star_transcript_index_rnaseq:
-    cpus_per_task: 8
-    mem_mb: 16000
-  star_transcript_rnaseq:
-    cpus_per_task: 8
-    mem_mb: 16000
-  star_transcript_index:
-    cpus_per_task: 8
-    mem_mb: 16000
-  star_transcript:
-    cpus_per_task: 12
-    mem_mb: 24000
-  salmon_bam:
-    cpus_per_task: 4
-    mem_mb: 16000

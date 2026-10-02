@@ -39,6 +39,9 @@ rule collapse_reads:
         f"{EXP_LOG_DIR}/collapse_reads/{{sample}}.log",
     conda:
         "../envs/python.yaml"
+    # holds every distinct read in memory: 6.6 GB peak on 41M reads
+    resources:
+        mem_mb=16000,
     shell:
         "zcat {input.fastq} | python {input.script} {wildcards.sample} 2> {log} | gzip > {output}"
 

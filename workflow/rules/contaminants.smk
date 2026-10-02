@@ -71,6 +71,8 @@ rule star_contaminant:
     conda:
         "../envs/star.yaml"
     threads: 8
+    resources:
+        mem_mb=16000,
     shell:
         r"""
         rm -rf {params.tmp_dir}
@@ -121,6 +123,8 @@ rule contaminant_compete_align:
     conda:
         "../envs/star.yaml"
     threads: 8
+    resources:
+        mem_mb=24000,
     shell:
         r"""
         exec > {log} 2>&1
@@ -171,6 +175,8 @@ rule contaminant_compete:
         f"{EXP_LOG_DIR}/contaminant_compete/{{sample}}.log",
     conda:
         "../envs/python.yaml"
+    resources:
+        mem_mb=16000,
     shell:
         "python {input.script} {input.clean} {input.contam_log} {input.removed} {input.contaminant} "
         "{input.transcriptome} {output.fastq} {output.stats} {output.records} 2> {log}"

@@ -28,6 +28,8 @@ rule star_transcript_index:
     conda:
         "../envs/star.yaml"
     threads: 8
+    resources:
+        mem_mb=16000,
     shell:
         "STAR --runThreadN {threads} --runMode genomeGenerate "
         "--genomeDir {output.index} --genomeFastaFiles {input} "
@@ -48,6 +50,8 @@ rule star_transcript:
     conda:
         "../envs/star.yaml"
     threads: 12
+    resources:
+        mem_mb=24000,
     shell:
         r"""
         STAR \

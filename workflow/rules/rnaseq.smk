@@ -19,6 +19,8 @@ rule star_transcript_index_rnaseq:
     conda:
         "../envs/star.yaml"
     threads: 8
+    resources:
+        mem_mb=16000,
     shell:
         "STAR --runThreadN {threads} --runMode genomeGenerate "
         "--genomeDir {output.index} --genomeFastaFiles {input} "
@@ -44,6 +46,8 @@ rule star_transcript_rnaseq:
     conda:
         "../envs/star.yaml"
     threads: 8
+    resources:
+        mem_mb=16000,
     shell:
         r"""
         STAR \
@@ -78,6 +82,8 @@ rule salmon_bam:
     conda:
         "../envs/salmon.yaml"
     threads: 4
+    resources:
+        mem_mb=16000,
     shell:
         r"""
         salmon quant -p {threads} --seqBias -t {input.fasta} -l A -a {input.bam} \
