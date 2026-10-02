@@ -86,8 +86,8 @@ rule star_contaminant:
             --outMultimapperOrder Random \
             --outFilterMultimapNmax 10000 \
             --outSAMmultNmax 1 \
-            --alignSJoverhangMin 8 \
-            --alignSJDBoverhangMin 1 \
+            --alignIntronMax 1 \
+            --alignEndsType Extend5pOfRead1 \
             --outTmpDir {params.tmp_dir} \
             --genomeLoad NoSharedMemory \
             --outSAMattributes NH HI AS NM MD \

@@ -81,5 +81,6 @@ RIBO_TRANSCRIPTOME_STAR_ARGS = (
     "--outFilterMultimapNmax 255 "
     "--outFilterMismatchNmax 2 "
     "--outFilterMultimapScoreRange 0 "
-    "--outFilterIntronMotifs RemoveNoncanonical"
+    "--alignIntronMax 1 "
+    "--alignEndsType Extend5pOfRead1"
 )
