@@ -19,7 +19,7 @@ flowchart TD
 
     ref["<b>Ribo-seq reference</b><br>combined_transcriptome,<br>star_transcript_index,<br>split_bed_transcriptome"]
     trim["<b>Ribo-seq preprocessing</b><br>cutadapt_reads,<br>collapse_reads, trim_reads"]
-    contam["<b>Contaminant filter</b><br>number_contaminants,<br>star_contaminant_index,<br>star_contaminant,<br>contaminant_compete_align,<br>contaminant_compete"]
+    contam["<b>Contaminant filter</b><br>star_contaminant_index,<br>star_contaminant,<br>contaminant_compete_align,<br>contaminant_compete"]
     align["<b>Ribo-seq alignment</b><br>star_transcript,<br>keep_sense,<br>split_bam_transcriptome"]
     qc["<b>Read counts</b><br>qc_library, qc_summary"]
 
@@ -94,7 +94,8 @@ says nothing about PCR duplicates.
 | `experiment` | optional: run several experiments at once (see Outputs). `sample_id` must be unique across them |
 
 `config/config.yaml` contains the cutadapt parameters, the contaminant fasta, the human and the spike-in
-transcriptome fasta, and `min_spike_in_fraction`. Every key is commented in the file. Fill in the placeholder paths with your own data and references
+transcriptome fasta, and `min_spike_in_fraction`. Every key is commented in the file. The contaminant fasta defaults
+to the set this repo ships, [resources/contaminants_built.fa](resources/contaminants_built.fa). Fill in the placeholder paths with your own data and references
 before running. The workflow checks both files against [workflow/schemas/](workflow/schemas/) when it starts, so a
 misspelt config key is an error.
 
@@ -194,5 +195,4 @@ consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
   trimmed reads exactly.
 - The helper scripts are Python (3.14) ports of the original pipeline's Perl and R scripts. Each was checked against
   the original, or against the original pipeline's saved output, on real data. All gave identical output: the
-  numbered contaminant fasta, the collapse statistics (41.1M → 12.4M reads), the collapsed reads themselves, and the
-  randomer trimming.
+  collapse statistics (41.1M → 12.4M reads), the collapsed reads themselves, and the randomer trimming.

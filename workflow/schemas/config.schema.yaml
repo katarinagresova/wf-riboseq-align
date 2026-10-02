@@ -39,6 +39,5 @@ required:
   - minlength
   - maxlength
   - qualcutoff
-  - contaminants_fa
   - human_transcriptome_fa
   - spike_in_transcriptome_fa

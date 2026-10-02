@@ -9,10 +9,15 @@ provenance of the files expected here.
 Produced by the `build_contaminants` rule (`workflow/rules/contaminants.smk`), which runs
 `workflow/scripts/build_contaminants.py` in the `python` conda env
 (`workflow/envs/python.yaml`: python 3.14.7). The rule is not part of the default targets —
-it needs internet access, so it's run explicitly and the output is then pointed to by
-`contaminants_fa` in `config.yaml`.
+it needs internet access, so it's run explicitly and the output is then copied here. It is
+the default `contaminants_fa` (`workflow/rules/common.smk`), which goes to STAR as is.
 
-Generated 2026-09-30. Built from:
+The script keeps the first record of each sequence (one strand) and prefixes every name with
+a running number (`1_human_...`): Ensembl gene symbols repeat (839 `human_Y_RNA`), and STAR
+needs unique names. Of the 8,448 downloaded records, 7,398 remain.
+
+Generated 2026-09-30; deduplicated and numbered 2026-10-02 from that download (no re-fetch),
+byte-identical to what the former `number_contaminants` rule made of it. Built from:
 
 - Ensembl release 109, `Homo_sapiens.GRCh38.ncrna.fa.gz` and
   `Saccharomyces_cerevisiae.R64-1-1.ncrna.fa.gz` — all ncRNA biotypes except `lncRNA`

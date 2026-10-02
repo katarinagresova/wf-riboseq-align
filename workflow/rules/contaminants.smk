@@ -7,8 +7,8 @@
 
 
 # Not part of the default targets: run explicitly (needs internet access) to
-# produce a contaminants_fa from public sources instead of a hand-maintained
-# file, then point `contaminants_fa` in config.yaml at the output.
+# rebuild the contaminant set from public sources, then copy the output over
+# resources/contaminants_built.fa (git-tracked; the default contaminants_fa).
 rule build_contaminants:
     input:
         script=workflow.source_path("../scripts/build_contaminants.py"),
@@ -22,41 +22,19 @@ rule build_contaminants:
         "python {input.script} {output} 2> {log}"
 
 
-# As number_contaminants.R in the eIF pipeline: STAR needs unique reference
-# names, and identical sequences would only split reads between the copies, so
-# keep the first record of each sequence and prefix its name with a running
-# number; 80-column fasta. Characters outside the IUPAC DNA alphabet are dropped,
-# as Biostrings did silently; the log names those records (the eIF contaminants
-# fasta has stray text in two). rmdup -P: seqkit would otherwise also drop
-# reverse-complement copies.
-rule number_contaminants:
-    input:
-        config["contaminants_fa"],
-    output:
-        f"{RESULTS_DIR}/reference/contaminants_numbered.fa",
-    log:
-        f"{LOG_DIR}/number_contaminants.log",
-    conda:
-        "../envs/seqkit.yaml"
-    shell:
-        r"""
-        exec 2> {log}
-        seqkit grep -s -r -i -P -p '[^ACGTMRWSYKVHDBN.+-]' {input} |
-            seqkit seq -n | sed 's/^/WARNING non-IUPAC characters dropped: /' >&2
-        seqkit seq -u {input} |
-            seqkit replace -s -p '[^ACGTMRWSYKVHDBN.+-]' -r '' |
-            seqkit rmdup -s -P |
-            seqkit replace -p '^' -r '{{nr}}_' -w 80 > {output}
-        """
-
-
+# contaminants_fa goes to STAR as is: build_contaminants writes it with unique
+# names and one record per sequence, and a fasta of the user's own must be so
+# too, else an error. STAR needs unique names (it keeps the header up to the
+# first space); a sequence twice would only split reads between the copies
+# (one strand: a reverse-complement copy is allowed).
+#
 # --genomeChrBinNbits 8: STAR pads every record to a multiple of 2^bits. The
 # default 18 (262 kb) made 1 Mb of short records a 1.9 GB index; STAR's
 # recommended min(18, log2(max(length / records, read length))) is ~7-10 for
 # contaminant sets, and 256 nt bins exceed any Ribo-seq read.
 rule star_contaminant_index:
     input:
-        f"{RESULTS_DIR}/reference/contaminants_numbered.fa",
+        config["contaminants_fa"],
     output:
         directory(f"{RESULTS_DIR}/star_index/contaminants"),
     log:
@@ -67,9 +45,31 @@ rule star_contaminant_index:
         "../envs/star.yaml"
     threads: 8
     shell:
-        "STAR --genomeSAindexNbases 9 --genomeChrBinNbits 8 --runThreadN {threads} --runMode genomeGenerate "
-        "--genomeFastaFiles {input} --genomeDir {output} "
-        "--outFileNamePrefix {params.log_prefix} > {log} 2>&1"
+        r"""
+        exec > {log} 2>&1
+        awk '
+            function end_record() {{
+                if (seq in first) {{ print "ERROR: " name " has the same sequence as " first[seq]; bad = 1 }}
+                else first[seq] = name
+            }}
+            /^>/ {{
+                if (n++) end_record()
+                name = substr($1, 2); seq = ""
+                if (name in names) {{ print "ERROR: duplicate record name " name; bad = 1 }}
+                names[name]
+                next
+            }}
+            {{ seq = seq toupper($0) }}
+            END {{
+                end_record()
+                if (bad) print "ERROR: contaminants_fa needs unique record names and sequences, as build_contaminants writes it"
+                exit bad
+            }}
+        ' {input}
+        STAR --genomeSAindexNbases 9 --genomeChrBinNbits 8 --runThreadN {threads} --runMode genomeGenerate \
+            --genomeFastaFiles {input} --genomeDir {output} \
+            --outFileNamePrefix {params.log_prefix}
+        """
 
 
 # Aligns the trimmed reads to the contaminants once: the unaligned reads are the

@@ -12,11 +12,14 @@ minlength: 18
 maxlength: 100
 qualcutoff: 20
 
-# rRNA / tRNA / snRNA ... (number_contaminants). A Ribo-seq read that aligns to
-# one is discarded only if that alignment scores at least as high (STAR AS) as
-# its best sense alignment to the transcriptome; otherwise it is mapped like a
-# clean read (contaminant_compete). A tie stays discarded.
-contaminants_fa: "/path/to/contaminants.fa"
+# rRNA / tRNA / snRNA ... A Ribo-seq read that aligns to one is discarded only
+# if that alignment scores at least as high (STAR AS) as its best sense
+# alignment to the transcriptome; otherwise it is mapped like a clean read
+# (contaminant_compete). A tie stays discarded.
+# Not set: the set this repo ships, resources/contaminants_built.fa
+# (build_contaminants). A fasta of your own goes to STAR as is: it needs unique
+# record names and each sequence once (star_contaminant_index errors otherwise).
+# contaminants_fa: "/path/to/contaminants.fa"
 
 # Transcriptomes. The Ribo-seq reads are mapped to both at once (human +
 # spike-in), then split by species.

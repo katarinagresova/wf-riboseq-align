@@ -7,6 +7,9 @@ from snakemake.utils import validate
 
 # also fills in the defaults (RESULTS_DIR, LOG_DIR, min_spike_in_fraction)
 validate(config, "../schemas/config.schema.yaml")
+# the set this repo ships; a path the schema cannot default (relative to the
+# repo, not to where snakemake runs), and through the source cache as a module
+config.setdefault("contaminants_fa", workflow.source_path("../../resources/contaminants_built.fa"))
 
 RESULTS_DIR = config["RESULTS_DIR"]
 LOG_DIR = config["LOG_DIR"]
