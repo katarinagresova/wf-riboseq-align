@@ -67,6 +67,7 @@ Fill in the placeholder paths with your own data and references before running.
 split_bam/transcriptome/human/<sample>.bam(.bai)     Ribo-seq, human transcripts
 split_bam/transcriptome/spike_in/<sample>.bam(.bai)  Ribo-seq, spike-in reads
 salmon/<sample>/quant.sf                             RNA-seq quantification
+salmon/<sample>/quant.rnaseq_filtered.sf             (mode filtered) the same, blacklisted transcripts dropped
 qc/<sample>.stats.tsv, qc/summary.tsv                Ribo-seq read counts per library (collapsed reads)
 fastqc/{ribo_raw,ribo_trimmed}/<sample>_fastqc.{html,zip}   FastQC, Ribo-seq before and after trimming
 fastqc/rna_raw/<sample>_R{1,2}_fastqc.{html,zip}              FastQC, raw RNA-seq

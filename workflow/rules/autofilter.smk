@@ -38,3 +38,20 @@ rule make_filtered_resources:
     shell:
         "python {input.script} {input.fa} {input.gtf} {input.blacklist} "
         "{output.fa} {output.gtf} 2> {log}"
+
+
+# The RNA-seq quantification on the same transcripts: salmon's quant.sf minus
+# the blacklisted rows (filter_quant.py says what is and is not changed).
+rule filter_quant:
+    input:
+        quant=f"{EXP_DIR}/salmon/{{sample}}/quant.sf",
+        blacklist=f"{EXP_DIR}/reference/rnaseq_filter_blacklist_txid.txt",
+        script=workflow.source_path("../scripts/filter_quant.py"),
+    output:
+        f"{EXP_DIR}/salmon/{{sample}}/quant.rnaseq_filtered.sf",
+    log:
+        f"{EXP_LOG_DIR}/autofilter/filter_quant/{{sample}}.log",
+    conda:
+        "../envs/python.yaml"
+    shell:
+        "python {input.script} {input.quant} {input.blacklist} {output} 2> {log}"
