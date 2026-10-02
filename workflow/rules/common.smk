@@ -75,12 +75,18 @@ CLEAN_FASTQ = f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.g
 
 # star_transcript's alignment settings. contaminant_compete_align uses the same
 # ones: it compares a read's contaminant AS with the AS star_transcript would
-# give it.
+# give it. --outMultimapperOrder Random + an explicit --runRNGseed makes
+# star_transcript's primary pick among equally-good loci random but
+# reproducible, as its comment claims (STAR's default order is fixed, not
+# random); contaminant_compete_align ignores which alignment is primary, so
+# this does not change its output.
 RIBO_TRANSCRIPTOME_STAR_ARGS = (
     "--seedSearchLmax 10 "
     "--outFilterMultimapNmax 255 "
     "--outFilterMismatchNmax 2 "
     "--outFilterMultimapScoreRange 0 "
     "--alignIntronMax 1 "
-    "--alignEndsType Extend5pOfRead1"
+    "--alignEndsType Extend5pOfRead1 "
+    "--outMultimapperOrder Random "
+    "--runRNGseed 777"
 )
