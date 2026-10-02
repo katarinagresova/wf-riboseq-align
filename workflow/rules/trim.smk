@@ -6,7 +6,7 @@ rule cutadapt_reads:
     input:
         lambda wc: samples.loc[wc.sample, "fastq_1"],
     output:
-        f"{EXP_DIR}/cutadapt_reads/{{sample}}.fastq.gz",
+        temp(f"{EXP_DIR}/cutadapt_reads/{{sample}}.fastq.gz"),
     log:
         f"{EXP_LOG_DIR}/cutadapt/{{sample}}.log",
     # via params, not {config[...]} in the shell string: as a module, the shell
@@ -34,7 +34,7 @@ rule collapse_reads:
         fastq=f"{EXP_DIR}/cutadapt_reads/{{sample}}.fastq.gz",
         script=workflow.source_path("../scripts/collapse_reads.py"),
     output:
-        f"{EXP_DIR}/collapse_reads/{{sample}}.fastq.gz",
+        temp(f"{EXP_DIR}/collapse_reads/{{sample}}.fastq.gz"),
     log:
         f"{EXP_LOG_DIR}/collapse_reads/{{sample}}.log",
     conda:
