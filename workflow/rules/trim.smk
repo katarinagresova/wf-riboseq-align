@@ -22,7 +22,9 @@ rule cutadapt_reads:
         "../envs/cutadapt.yaml"
     threads: 4
     shell:
-        "cutadapt --cores {threads} -a {params.adapter} "
+        # -O 6: default -O 3 lets a 3 nt chance match to the adapter trim real
+        # insert bases off the 3' end; -O 6 is long enough to be a real adapter
+        "cutadapt --cores {threads} -a {params.adapter} -O 6 "
         "--minimum-length {params.minlength} --maximum-length {params.maxlength} "
         "--quality-cutoff {params.qualcutoff} -o {output} {input} > {log} 2>&1"
 
