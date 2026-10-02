@@ -86,7 +86,7 @@ rule keep_sense:
         bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
         script=workflow.source_path("../scripts/keep_sense.py"),
     output:
-        f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.sense.bam",
+        temp(f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.sense.bam"),
     log:
         f"{EXP_LOG_DIR}/align/keep_sense/{{sample}}.log",
     conda:
