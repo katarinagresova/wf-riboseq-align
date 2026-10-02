@@ -13,8 +13,10 @@ rule cutadapt_reads:
     # would format against the importing workflow's config
     params:
         adapter=config["adapter"],
-        minlength=config["minlength"],
-        maxlength=config["maxlength"],
+        # minlength / maxlength are of the insert: the read still has its
+        # 4+4 nt randomers here (trim_reads strips them)
+        minlength=config["minlength"] + 8,
+        maxlength=config["maxlength"] + 8,
         qualcutoff=config["qualcutoff"],
     conda:
         "../envs/cutadapt.yaml"

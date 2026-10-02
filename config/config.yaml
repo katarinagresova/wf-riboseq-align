@@ -15,7 +15,8 @@ LOG_DIR: "logs"
 #   unfiltered - human_transcriptome_fa as is.
 mode: "filtered"
 
-# Ribo-seq adapter trimming (cutadapt_reads)
+# Ribo-seq adapter trimming (cutadapt_reads). minlength / maxlength are of the
+# insert, i.e. the read without its 4+4 nt randomers (cutadapt gets them + 8).
 adapter: "TGGAATTCTCGGGTGCCAAGG"
 minlength: 18
 maxlength: 100

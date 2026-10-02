@@ -77,7 +77,8 @@ transcriptome (dotted arrow). Not shown: FastQC and MultiQC, which report on the
 
 Ribo-seq (single-end, with 4+4 nt randomers around the insert):
 
-1. `cutadapt_reads`: trim the 3' adapter, keeping reads of 18–100 nt
+1. `cutadapt_reads`: trim the 3' adapter, keeping reads whose insert (the read without its randomers) is 18–100 nt
+   (`minlength`, `maxlength`)
 2. `collapse_reads`: collapse identical reads. The randomers are still part of the read at this point, so PCR
    duplicates collapse but distinct molecules stay distinct
 3. `trim_reads`: strip the randomers and append them to the read name
