@@ -16,6 +16,12 @@ validate(samples, "../schemas/samples.schema.yaml")
 if samples.index.duplicated().any():
     raise ValueError(f"samples.csv: duplicate sample_id {sorted(set(samples.index[samples.index.duplicated()]))}")
 
+# {sample} only ever matches a whole sample_id, so a pattern like fastqc's
+# {sample}_R{mate} cannot split one differently
+wildcard_constraints:
+    sample="|".join(re.escape(s) for s in samples.index),
+
+
 # Optional `experiment` column: several experiments in one run. Each gets its
 # own outputs, incl. its own RNA-seq-filtered reference, under
 # {RESULTS_DIR}/{experiment}/ (logs under {LOG_DIR}/{experiment}/). Without the

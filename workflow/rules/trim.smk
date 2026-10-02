@@ -20,11 +20,9 @@ rule cutadapt_reads:
         "../envs/cutadapt.yaml"
     threads: 4
     shell:
-        "zcat {input} | "
         "cutadapt --cores {threads} -a {params.adapter} "
         "--minimum-length {params.minlength} --maximum-length {params.maxlength} "
-        "--quality-cutoff {params.qualcutoff} - 2> {log} | "
-        "gzip > {output}"
+        "--quality-cutoff {params.qualcutoff} -o {output} {input} > {log} 2>&1"
 
 
 # Collapse BEFORE stripping the randomers: they are part of the sequence here,

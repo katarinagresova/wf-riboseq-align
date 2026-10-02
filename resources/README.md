@@ -1,8 +1,8 @@
 # resources/
 
-Gitignored scratch space for locally-generated reference files (see `.gitignore`). This
-README documents provenance for files that are expected to show up here, since the files
-themselves aren't committed.
+Scratch space for locally-generated reference files. Everything here is gitignored except
+this README and `contaminants_built.fa` (see `.gitignore`). This README documents the
+provenance of the files expected here.
 
 ## contaminants_built.fa
 
