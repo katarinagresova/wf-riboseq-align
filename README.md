@@ -2,8 +2,8 @@
 
 A Snakemake workflow that takes raw Ribo-seq fastq files to **transcriptome-aligned BAM files**, split into the human
 reads and the spike-in reads. It also quantifies the matched total RNA-seq with salmon. It is a generalised,
-reproducible version of the alignment part of the eIF project pipeline (Gabriel Villamil, Frederick Korbel). It can be
-run on its own or imported into another Snakemake workflow.
+reproducible port of an existing lab Ribo-seq alignment pipeline. It can be run on its own or imported into another
+Snakemake workflow.
 
 ## What it does
 
@@ -70,9 +70,10 @@ flowchart TD
 
 Blue is the Ribo-seq path, orange the RNA-seq path. The two bold inputs are the fastqs in `samples.csv`, the grey
 ones the references in `config.yaml`; square boxes are groups of rules, rounded boxes the main outputs (see
-Outputs). In mode `filtered` the RNA-seq path also decides which human transcripts the Ribo-seq reads map to
-(`filtered fa`); mode `unfiltered` skips the expression filter and maps them to the whole transcriptome (dotted
-arrow, see `mode` below). Not shown: FastQC and MultiQC, which report on the fastqs and every step's log.
+Outputs). `mode` (default `filtered`, see config.yaml) decides which human transcripts the Ribo-seq reads map to:
+`filtered` builds the reference from the RNA-seq path too (`filtered fa`), and needs `read_type=rna` rows in
+`samples.csv`; `unfiltered` is an explicit opt-out that skips the expression filter and maps to the whole
+transcriptome (dotted arrow). Not shown: FastQC and MultiQC, which report on the fastqs and every step's log.
 
 Ribo-seq (single-end, with 4+4 nt randomers around the insert):
 
@@ -99,18 +100,6 @@ transcript, e.g. from an intron, is counted for none.
 FastQC (`fastqc_ribo_raw`, `fastqc_rna_raw`, `fastqc_ribo_trimmed`): reports on the raw Ribo-seq fastqs, the raw
 RNA-seq fastqs (R1 and R2 separately), and the trimmed Ribo-seq reads that `star_contaminant` maps (the output of
 step 3). Those trimmed reads are already collapsed, so their duplication plot says nothing about PCR duplicates.
-
-## The one choice: `mode`
-
-The two eIF pipelines differ in a single step: which human transcriptome the Ribo-seq reads are mapped to.
-
-| `mode` | Human reference for Ribo-seq | Used by |
-|---|---|---|
-| `filtered` | Transcripts the matched RNA-seq expresses: TPM ≥ `min_tpm` in ≥ `min_samples` libraries. Filtered per run. | eIF depletion experiments |
-| `unfiltered` | `human_transcriptome_fa` as given | eIF harringtonine experiments |
-
-Both modes append the spike-in transcriptome. For libraries without a spike-in this is harmless: the spike_in BAM is
-simply (nearly) empty. `filtered` needs `read_type=rna` rows in `samples.csv`.
 
 ## Inputs
 
@@ -220,18 +209,18 @@ use rule * from align as align_*
 ```
 
 For several experiments, import it once with an `experiment` column in its `samples.csv` (with `RESULTS_DIR:
-results/align`, experiment `eIF4E_4h` lands in `results/align/eIF4E_4h/`), rather than once per experiment.
+results/align`, experiment `treatmentA` lands in `results/align/treatmentA/`), rather than once per experiment.
 Relative paths in the `align` block are resolved from the importing workflow's directory. Its rules can then
 consume, for example, `rules.align_split_bam_transcriptome.output.bam`.
 
 ## Reproducibility
 
 - Every rule has a conda env with exact version pins. STAR 2.7.10b, samtools 1.17 and salmon 1.10.2 are the versions
-  in the eIF pipeline's container.
-- cutadapt is 5.2 on Python 3.13, because no cutadapt build exists for Python 3.14 yet. On 2M eIF4E reads its
-  output is byte-identical to 4.4, the container's version, which in turn reproduces the eIF pipeline's trimmed
-  reads exactly.
-- The helper scripts are Python (3.14) ports of the pipeline's Perl and R scripts. Each was checked against the
-  original, or against the eIF pipeline's saved output, on the eIF4E 4 h data. All gave identical output: the
+  in the original pipeline's container.
+- cutadapt is 5.2 on Python 3.13, because no cutadapt build exists for Python 3.14 yet. On a 2M-read test library
+  its output is byte-identical to 4.4, the container's version, which in turn reproduces the original pipeline's
+  trimmed reads exactly.
+- The helper scripts are Python (3.14) ports of the original pipeline's Perl and R scripts. Each was checked against
+  the original, or against the original pipeline's saved output, on real data. All gave identical output: the
   numbered contaminant fasta, the RNA-seq blacklist (1,673 transcripts), the filtered fasta and gtf, the collapse
   statistics (41.1M → 12.4M reads), the collapsed reads themselves, and the randomer trimming.

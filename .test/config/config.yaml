@@ -6,7 +6,7 @@
 samples: "config/samples.csv"
 RESULTS_DIR: "results"
 LOG_DIR: "logs"
-mode: "filtered"
+# mode left unset: exercises the schema's default (filtered)
 
 adapter: "TGGAATTCTCGGGTGCCAAGG"
 minlength: 18
