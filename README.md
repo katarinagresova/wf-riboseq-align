@@ -7,6 +7,73 @@ run on its own or imported into another Snakemake workflow.
 
 ## What it does
 
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 30}}}%%
+flowchart TD
+    rna[/"<b>RNA-seq fastq<br>(R1, R2)</b>"/]
+    genome[/"human_genome_fa"/]
+    human[/"human_transcriptome_fa<br>+ gtf"/]
+    spike[/"spike_in_<br>transcriptome_fa"/]
+    contam_fa[/"contaminants_fa"/]
+    ribo[/"<b>Ribo-seq fastq</b>"/]
+
+    salmon["<b>RNA-seq quantification</b><br>salmon_gentrome,<br>salmon_index, salmon_quant"]
+    filter["<b>Expression filter</b><br>(mode filtered)<br>filter_rnaseq,<br>make_filtered_resources,<br>filter_quant"]
+    ref["<b>Ribo-seq reference</b><br>combined_transcriptome,<br>star_transcript_index,<br>split_bed_transcriptome"]
+    trim["<b>Ribo-seq preprocessing</b><br>cutadapt_reads,<br>collapse_reads, trim_reads"]
+    contam["<b>Contaminant filter</b><br>number_contaminants,<br>star_contaminant_index,<br>star_contaminant,<br>contaminant_compete_align,<br>contaminant_compete"]
+    align["<b>Ribo-seq alignment</b><br>star_transcript,<br>split_bam_transcriptome"]
+    qc["<b>Read counts</b><br>qc_library, qc_summary"]
+
+    quant(["salmon/*/quant.sf"])
+    quant_filtered(["salmon/*/<br>quant.rnaseq_filtered.sf"])
+    bams(["split_bam/transcriptome/<br>{human,spike_in}/*.bam"])
+    summary(["qc/summary.tsv"])
+
+    %% Longer arrows (more dashes) keep every input on the top row and every output on the bottom row.
+    %% The edge order keeps the diagram narrow: GitHub shrinks a wide one, and its text with it.
+    ribo --> trim
+    trim ---->|"trim_reads/<br>*.fastq.gz"| contam
+    contam_fa -----> contam
+    spike ----> ref
+    ref -->|"STAR index"| contam
+    contam -->|"*.competitive<br>.fastq.gz"| align
+    ref -->|"STAR index,<br>per-species bed"| align
+    contam -->|"contaminant<br>counts"| qc
+    align -->|"BAMs"| qc
+    align ---> bams
+    qc --> summary
+    human -..->|"fa<br>(mode unfiltered)"| ref
+    filter -->|"filtered fa"| ref
+    human -->|"fa + gtf"| filter
+    salmon -->|"quant.sf"| filter
+    rna --> salmon
+    genome -->|"decoys"| salmon
+    human -->|"fa"| salmon
+    salmon -------> quant
+    filter ------> quant_filtered
+
+    classDef riboInput fill:#1f78b4,stroke:#0b3c5d,stroke-width:3px,color:#fff
+    classDef rnaInput fill:#e66101,stroke:#7f3600,stroke-width:3px,color:#fff
+    classDef helper fill:#f4f4f4,stroke:#aaa,color:#555
+    classDef riboStep fill:#d6e6f5,stroke:#1f78b4,stroke-width:2px,color:#000
+    classDef rnaStep fill:#fde0c5,stroke:#e66101,stroke-width:2px,color:#000
+    class ribo riboInput
+    class rna rnaInput
+    class contam_fa,spike,human,genome helper
+    class trim,contam,ref,align,qc,bams,summary riboStep
+    class salmon,filter,quant,quant_filtered rnaStep
+    linkStyle 12,14,15,18,19 stroke:#e66101,stroke-width:2.5px
+    linkStyle 0,1,5,7,8,9,10 stroke:#1f78b4,stroke-width:2.5px
+    linkStyle 2,3,4,6,11,13,16,17 stroke:#999
+```
+
+Blue is the Ribo-seq path, orange the RNA-seq path. The two bold inputs are the fastqs in `samples.csv`, the grey
+ones the references in `config.yaml`; square boxes are groups of rules, rounded boxes the main outputs (see
+Outputs). In mode `filtered` the RNA-seq path also decides which human transcripts the Ribo-seq reads map to
+(`filtered fa`); mode `unfiltered` skips the expression filter and maps them to the whole transcriptome (dotted
+arrow, see `mode` below). Not shown: FastQC and MultiQC, which report on the fastqs and every step's log.
+
 Ribo-seq (single-end, with 4+4 nt randomers around the insert):
 
 1. `cutadapt_reads`: trim the 3' adapter, keeping reads of 18–100 nt
@@ -25,9 +92,9 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
    all mapped). Reads aligned to both species stay in both BAM files and are only counted. The run fails if any
    library's spike-in fraction is below `min_spike_in_fraction` (default 0.01; set 0 for libraries without spike-in)
 
-Total RNA-seq (paired-end): map to the human transcriptome with STAR (every alignment of a multimapping fragment
-kept, up to 255 loci), then quantify with `salmon quant`. salmon reads STAR's unsorted BAM (mates adjacent), which is
-deleted afterwards; the run fails if salmon reports any suspicious pair.
+Total RNA-seq (paired-end): quantify on the human transcriptome with `salmon quant` (selective alignment, with
+sequence and GC bias correction), the genome as decoys: a fragment that aligns better to the genome than to any
+transcript, e.g. from an intron, is counted for none.
 
 FastQC (`fastqc_ribo_raw`, `fastqc_rna_raw`, `fastqc_ribo_trimmed`): reports on the raw Ribo-seq fastqs, the raw
 RNA-seq fastqs (R1 and R2 separately), and the trimmed Ribo-seq reads that `star_contaminant` maps (the output of
@@ -58,9 +125,10 @@ simply (nearly) empty. `filtered` needs `read_type=rna` rows in `samples.csv`.
 | `experiment` | optional: run several experiments at once (see Outputs). `sample_id` must be unique across them |
 
 `config/config.yaml` contains `mode`, the cutadapt parameters, the contaminant fasta, the human transcriptome
-fasta + gtf, the spike-in transcriptome fasta, `min_spike_in_fraction`, and the `autofilter` thresholds. Every key is commented in the file.
-Fill in the placeholder paths with your own data and references before running. The workflow checks both
-files against [workflow/schemas/](workflow/schemas/) when it starts, so a misspelt config key is an error.
+fasta + gtf and its genome fasta, the spike-in transcriptome fasta, `min_spike_in_fraction`, and the `autofilter`
+thresholds. Every key is commented in the file. Fill in the placeholder paths with your own data and references
+before running. The workflow checks both files against [workflow/schemas/](workflow/schemas/) when it starts, so a
+misspelt config key is an error.
 
 ## Outputs (under `RESULTS_DIR`, default `results/`)
 
@@ -86,9 +154,9 @@ distributions and base composition.
 With an `experiment` column (as in the example `config/samples.csv`), each experiment gets the above to itself, in
 `RESULTS_DIR/<experiment>/` and `LOG_DIR/<experiment>/`: its own `filtered` reference (from its own RNA-seq), Ribo-seq
 index and `qc/summary.tsv`. What does not depend on the experiment (the contaminant set and its index, the RNA-seq
-index of the unfiltered transcriptome) is built once, in `RESULTS_DIR/reference/` and `RESULTS_DIR/star_index/`, so
-no experiment can be named `reference`, `star_index` or `star`. Without the column, the whole of `samples.csv` is one
-experiment, directly in `RESULTS_DIR`.
+salmon index) is built once, in `RESULTS_DIR/reference/`, `RESULTS_DIR/star_index/` and `RESULTS_DIR/salmon_index/`,
+so no experiment can be named `reference`, `star_index`, `star` or `salmon_index`. Without the column, the whole of
+`samples.csv` is one experiment, directly in `RESULTS_DIR`.
 
 ## Setup
 
@@ -125,14 +193,16 @@ Both wrappers activate the `snake` conda env. To use your own config: `./snakema
 `.test/` holds a tiny synthetic dataset: random sequences written by `.test/make_data.py`, not real reads. It is
 built so that every step has something to do: PCR duplicates, adapter dimers, contaminant reads, reads on two
 contaminants, reads that tie with or beat their contaminant alignment, reads in both species' BAMs, transcripts
-without RNA-seq reads (for the blacklist), and two experiments. The whole workflow runs on it in a few minutes:
+without RNA-seq reads (for the blacklist), pre-mRNA reads (for salmon's decoys), and two experiments. The whole
+workflow runs on it in a few minutes:
 
 ```bash
 snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
 ```
 
 CI ([.github/workflows/test.yaml](.github/workflows/test.yaml)) runs lint, a dry run and this run on every push to
-`main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads.
+`main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads or salmon
+assigns no fragment to a decoy.
 
 ## Use it from another workflow
 

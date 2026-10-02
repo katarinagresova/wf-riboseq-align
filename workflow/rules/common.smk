@@ -26,9 +26,9 @@ wildcard_constraints:
 # own outputs, incl. its own RNA-seq-filtered reference, under
 # {RESULTS_DIR}/{experiment}/ (logs under {LOG_DIR}/{experiment}/). Without the
 # column the run is one experiment, directly in RESULTS_DIR / LOG_DIR. The
-# experiment-independent outputs (contaminant set and index, unfiltered RNA-seq
-# index) are always directly in RESULTS_DIR (reference/, star_index/) and
-# LOG_DIR (star/), so they are built once.
+# experiment-independent outputs (contaminant set and index, RNA-seq salmon
+# index) are always directly in RESULTS_DIR (reference/, star_index/,
+# salmon_index/) and LOG_DIR (star/, salmon_index/), so they are built once.
 if "experiment" in samples.columns:
     if samples["experiment"].isna().any():
         raise ValueError("samples.csv: with an experiment column, every row needs an experiment")

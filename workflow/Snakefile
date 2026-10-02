@@ -25,7 +25,6 @@ rule all:
                 experiment_files(f"{EXP_DIR}/salmon/{{sample}}/quant.sf", e, "rna"),
                 experiment_files(f"{EXP_DIR}/salmon/{{sample}}/quant.rnaseq_filtered.sf", e, "rna")
                 if MODE == "filtered" else [],
-                experiment_files(f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai", e, "rna"),
                 experiment_files(f"{EXP_DIR}/fastqc/{{stage}}/{{sample}}_fastqc.html", e, "ribo",
                                  stage=["ribo_raw", "ribo_trimmed"]),
                 experiment_files(f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R{{mate}}_fastqc.html", e, "rna", mate=[1, 2]),

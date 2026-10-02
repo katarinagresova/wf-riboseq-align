@@ -25,10 +25,14 @@ qualcutoff: 20
 # clean read (contaminant_compete). A tie stays discarded.
 contaminants_fa: "/path/to/contaminants.fa"
 
-# Transcriptomes. Every read type maps to these, never to a genome.
+# Transcriptomes. Every read type is mapped / quantified on these.
 human_transcriptome_fa: "/path/to/human_transcriptome.fa"
 human_transcriptome_gtf: "/path/to/human_transcriptome.gtf"
 spike_in_transcriptome_fa: "/path/to/yeast_transcriptome.fa"
+# The genome of the human transcriptome (uncompressed fasta). Only salmon's
+# decoys: an RNA-seq fragment that aligns better to it than to any transcript
+# (e.g. intronic) is counted for none.
+human_genome_fa: "/path/to/human_genome.fa"
 
 # qc_summary fails if any Ribo-seq library has a lower spike-in fraction
 # (spike-in-only reads / all mapped reads). Set 0 for libraries without a

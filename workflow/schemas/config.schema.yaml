@@ -32,6 +32,8 @@ properties:
     type: string
   spike_in_transcriptome_fa:
     type: string
+  human_genome_fa:
+    type: string
   min_spike_in_fraction:
     type: number
     minimum: 0
@@ -60,4 +62,5 @@ required:
   - human_transcriptome_fa
   - human_transcriptome_gtf
   - spike_in_transcriptome_fa
+  - human_genome_fa
   - autofilter

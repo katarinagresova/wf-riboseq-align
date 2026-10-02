@@ -1,4 +1,4 @@
-# MultiQC config for rule multiqc (rules/multiqc.smk). The four STAR steps
+# MultiQC config for rule multiqc (rules/multiqc.smk). The three STAR steps
 # report the same sample names, and so do the raw and trimmed Ribo-seq FastQC,
 # so each gets its own section, selected by path.
 no_version_check: true
@@ -27,11 +27,6 @@ module_order:
       anchor: star_transcript
       path_filters:
         - "*/star/transcriptome/*"
-  - star:
-      name: "STAR: RNA-seq transcriptome"
-      anchor: star_transcript_rnaseq
-      path_filters:
-        - "*/star/transcriptome_rnaseq/*"
   - salmon
   - fastqc:
       name: "FastQC: raw"

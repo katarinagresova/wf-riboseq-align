@@ -17,6 +17,7 @@ contaminants_fa: "data/contaminants.fa"
 human_transcriptome_fa: "data/human.fa"
 human_transcriptome_gtf: "data/human.gtf"
 spike_in_transcriptome_fa: "data/yeast.fa"
+human_genome_fa: "data/genome.fa"
 
 min_spike_in_fraction: 0.01
 

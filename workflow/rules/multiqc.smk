@@ -1,6 +1,6 @@
-# One MultiQC report per experiment: cutadapt, the four STAR steps
-# (star_contaminant, contaminant_compete_align, star_transcript,
-# star_transcript_rnaseq), salmon and FastQC. Sections and sample names:
+# One MultiQC report per experiment: cutadapt, the three STAR steps
+# (star_contaminant, contaminant_compete_align, star_transcript), salmon and
+# FastQC. Sections and sample names:
 # workflow/multiqc_config.yaml. qc/summary.tsv stays: MultiQC does not count
 # rescued reads or the species split.
 MULTIQC_REPORTS = [
@@ -8,7 +8,6 @@ MULTIQC_REPORTS = [
     (f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out", "ribo"),
     (f"{EXP_DIR}/filter_reads/{{sample}}/compete/{{sample}}.transcriptome_Log.final.out", "ribo"),
     (f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_Log.final.out", "ribo"),
-    (f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Log.final.out", "rna"),
     (f"{EXP_DIR}/fastqc/ribo_raw/{{sample}}_fastqc.zip", "ribo"),
     (f"{EXP_DIR}/fastqc/ribo_trimmed/{{sample}}_fastqc.zip", "ribo"),
     (f"{EXP_DIR}/fastqc/rna_raw/{{sample}}_R1_fastqc.zip", "rna"),

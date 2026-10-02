@@ -14,10 +14,11 @@ properties:
   experiment:
     type: string
     description: >-
-      optional column. Not reference, star_index or star: the experiment-independent outputs' directories
+      optional column. Not reference, star_index, star or salmon_index: the experiment-independent outputs'
+      directories
     pattern: "^[^/]+$"
     not:
-      enum: [reference, star_index, star]
+      enum: [reference, star_index, star, salmon_index]
 required: [sample_id, read_type, fastq_1]
 if:
   properties:

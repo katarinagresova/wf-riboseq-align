@@ -1,82 +1,61 @@
-# Matched total RNA-seq (paired-end): map to the UNFILTERED human transcriptome
-# and quantify with salmon. Runs in both modes; in mode "filtered" these quants
-# also decide which transcripts the ribo reference keeps (autofilter.smk).
+# Matched total RNA-seq (paired-end): quantify on the UNFILTERED human
+# transcriptome with salmon, the genome as decoys. Runs in both modes; in mode
+# "filtered" these quants also decide which transcripts the ribo reference
+# keeps (autofilter.smk).
 #
-# The unfiltered index does not depend on the experiment: it lives in
-# RESULTS_DIR, not EXP_DIR, so a multi-experiment run builds it once.
+# The index does not depend on the experiment: it lives in RESULTS_DIR, not
+# EXP_DIR, so a multi-experiment run builds it once.
 
 
-rule star_transcript_index_rnaseq:
+# salmon's decoy-aware reference: the transcripts, then every genome sequence
+# (decoys must come last), and the decoys' names.
+rule salmon_gentrome:
     input:
-        config["human_transcriptome_fa"],
+        transcriptome=config["human_transcriptome_fa"],
+        genome=config["human_genome_fa"],
     output:
-        index=directory(f"{RESULTS_DIR}/star_index/unfiltered_transcriptome"),
-        chrom_sizes=f"{RESULTS_DIR}/star_index/unfiltered_transcriptome/chrNameLength.txt",
+        gentrome=temp(f"{RESULTS_DIR}/salmon_index/gentrome.fa"),
+        decoys=f"{RESULTS_DIR}/salmon_index/decoys.txt",
     log:
-        f"{LOG_DIR}/star/unfiltered_transcriptome_index.log",
-    params:
-        log_prefix=f"{LOG_DIR}/star/unfiltered_transcriptome_index.",
+        f"{LOG_DIR}/salmon_index/gentrome.log",
     conda:
-        "../envs/star.yaml"
-    threads: 8
-    resources:
-        mem_mb=16000,
-    shell:
-        "STAR --runThreadN {threads} --runMode genomeGenerate "
-        "--genomeDir {output.index} --genomeFastaFiles {input} "
-        "--genomeSAindexNbases 11 --genomeChrBinNbits 12 "
-        "--outFileNamePrefix {params.log_prefix} > {log} 2>&1"
-
-
-# Every alignment of a multimapping fragment is written (no --outSAMmultNmax),
-# so salmon distributes it over its transcripts by EM. With
-# --outSAMmultNmax 1, as in the eIF pipeline, salmon saw one arbitrary
-# alignment per fragment and assigned it there.
-rule star_transcript_rnaseq:
-    input:
-        fastq1=lambda wc: samples.loc[wc.sample, "fastq_1"],
-        fastq2=lambda wc: samples.loc[wc.sample, "fastq_2"],
-        index=f"{RESULTS_DIR}/star_index/unfiltered_transcriptome",
-    output:
-        bam=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam",
-        bai=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai",
-        unsorted_bam=temp(f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam"),
-        log_final=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Log.final.out",
-    log:
-        f"{EXP_LOG_DIR}/star/transcriptome_rnaseq/{{sample}}.log",
-    params:
-        prefix=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_",
-    conda:
-        "../envs/star.yaml"
-    threads: 8
-    resources:
-        mem_mb=16000,
+        "../envs/coreutils.yaml"
     shell:
         r"""
-        exec > {log} 2>&1
-        STAR \
-            --runThreadN {threads} \
-            --genomeDir {input.index} \
-            --outSAMtype BAM Unsorted \
-            --outSAMmode NoQS \
-            --outSAMattributes NH NM \
-            --seedSearchLmax 10 \
-            --outFilterMultimapNmax 255 \
-            --outFilterMismatchNmax 2 \
-            --outFilterIntronMotifs RemoveNoncanonical \
-            --outFileNamePrefix {params.prefix} \
-            --readFilesIn {input.fastq1} {input.fastq2} \
-            --readFilesCommand zcat
-
-        samtools sort -@ {threads} {output.unsorted_bam} -o {output.bam}
-        samtools index {output.bam}
+        exec 2> {log}
+        grep '^>' {input.genome} | cut -c2- | cut -d' ' -f1 > {output.decoys}
+        cat {input.transcriptome} {input.genome} > {output.gentrome}
         """
 
 
-rule salmon_bam:
+# A fragment that aligns better to the genome than to any transcript (intronic,
+# intergenic, an unannotated copy) is counted for no transcript. By default
+# salmon drops a transcript whose sequence duplicates another's (25 in the
+# HCT116 set) from the index and quant.sf, and filter_rnaseq would blacklist it
+# as TPM 0: --keepDuplicates.
+rule salmon_index:
     input:
-        bam=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam",
-        fasta=config["human_transcriptome_fa"],
+        gentrome=f"{RESULTS_DIR}/salmon_index/gentrome.fa",
+        decoys=f"{RESULTS_DIR}/salmon_index/decoys.txt",
+    output:
+        directory(f"{RESULTS_DIR}/salmon_index/transcriptome_genome_decoys"),
+    log:
+        f"{LOG_DIR}/salmon_index/index.log",
+    conda:
+        "../envs/salmon.yaml"
+    threads: 16
+    resources:
+        mem_mb=24000,
+    shell:
+        "salmon index -p {threads} -t {input.gentrome} -d {input.decoys} -k 31 --keepDuplicates "
+        "-i {output} > {log} 2>&1"
+
+
+rule salmon_quant:
+    input:
+        fastq1=lambda wc: samples.loc[wc.sample, "fastq_1"],
+        fastq2=lambda wc: samples.loc[wc.sample, "fastq_2"],
+        index=f"{RESULTS_DIR}/salmon_index/transcriptome_genome_decoys",
     output:
         f"{EXP_DIR}/salmon/{{sample}}/quant.sf",
     params:
@@ -85,18 +64,9 @@ rule salmon_bam:
         f"{EXP_LOG_DIR}/salmon/{{sample}}.log",
     conda:
         "../envs/salmon.yaml"
-    threads: 4
+    threads: 8
     resources:
-        mem_mb=16000,
+        mem_mb=24000,
     shell:
-        r"""
-        salmon quant -p {threads} --seqBias -t {input.fasta} -l A -a {input.bam} \
-            --output {params.out_dir} > {log} 2>&1
-
-        # salmon only warns when mates are not adjacent in the BAM (e.g. a
-        # coordinate-sorted one), and then quantifies them wrongly
-        if grep -q "suspicious pair" {log}; then
-            echo "ERROR: salmon reported suspicious pairs (see {log}); mates must be adjacent in {input.bam}." >&2
-            exit 1
-        fi
-        """
+        "salmon quant -p {threads} -i {input.index} -l A -1 {input.fastq1} -2 {input.fastq2} "
+        "--seqBias --gcBias --output {params.out_dir} > {log} 2>&1"
