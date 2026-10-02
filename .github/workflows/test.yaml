@@ -39,9 +39,3 @@ jobs:
           awk -F'\t' '{n[FILENAME, $1] = $2; files[FILENAME]}
           END {for (f in files) if (!n[f, "reads_dropped"] || !n[f, "primary_moved"]) {print f ": none"; bad = 1};
           exit bad}' .test/logs/*/align/keep_sense/*.log
-      # the both-species reads: each has its primary in one species' BAM, so the other one moves it
-      - name: Check that the species split moved a primary in every library and species
-        run: >-
-          awk -F'\t' '{n[FILENAME, $1] = $2; files[FILENAME]}
-          END {for (f in files) if (!n[f, "primary_moved"]) {print f ": none"; bad = 1}; exit bad}'
-          .test/logs/*/align/split_bam/*/*.log

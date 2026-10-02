@@ -1,9 +1,10 @@
 # Per-library Ribo-seq read counts: the contaminant step (from STAR's
-# Log.final.out) and the species split. A read aligned to both species stays in
-# both BAMs; it is counted as both_species, not moved. Counts are collapsed
-# reads, the unit STAR reports as input reads. contaminant_unique / _multi are
-# what star_contaminant aligned; contaminant_rescued of them are put back
-# (contaminant_compete) and counted in clean_reads.
+# Log.final.out) and the species split. A read aligned to both species is in
+# neither BAM; it is counted as both_species (from the split logs, which must
+# agree). Counts are collapsed reads, the unit STAR reports as input reads.
+# contaminant_unique / _multi are what star_contaminant aligned;
+# contaminant_rescued of them are put back (contaminant_compete) and counted in
+# clean_reads.
 
 
 rule qc_library:
@@ -12,13 +13,12 @@ rule qc_library:
         rescue=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.compete.tsv",
         human=f"{EXP_DIR}/split_bam/transcriptome/human/{{sample}}.bam",
         spike_in=f"{EXP_DIR}/split_bam/transcriptome/spike_in/{{sample}}.bam",
+        human_log=f"{EXP_LOG_DIR}/align/split_bam/human/{{sample}}.log",
+        spike_in_log=f"{EXP_LOG_DIR}/align/split_bam/spike_in/{{sample}}.log",
     output:
         f"{EXP_DIR}/qc/{{sample}}.stats.tsv",
     log:
         f"{EXP_LOG_DIR}/qc/{{sample}}.log",
-    # sort spills here, not to the node's /tmp (filled up on compute nodes)
-    params:
-        tmp_dir=f"{EXP_DIR}/qc/{{sample}}_tmp_sort",
     conda:
         "../envs/star.yaml"
     shell:
@@ -30,27 +30,24 @@ rule qc_library:
         unique=$(star_stat "Uniquely mapped reads number")
         multi=$(star_stat "Number of reads mapped to multiple loci")
         rescued=$(awk -F'\t' '$1 == "rescued" {{print $2}}' {input.rescue})
+        split_stat() {{ awk -F'\t' '$1 == "both_species" {{print $2}}' "$1"; }}
+        both=$(split_stat {input.human_log})
+        if [ -z "$both" ] || [ "$both" != "$(split_stat {input.spike_in_log})" ]; then
+            echo "both_species missing from the split logs, or differs between them" >&2
+            exit 1
+        fi
+        # reads = primary records: STAR and keep_sense leave one per read
+        human=$(samtools view -c -F 0x100 {input.human})
+        spike_in=$(samtools view -c -F 0x100 {input.spike_in})
 
-        rm -rf {params.tmp_dir}
-        mkdir -p {params.tmp_dir}
-        # to files, not comm <(...): bash ignores a failure inside <(...), e.g. a full disk
-        samtools view {input.human} | cut -f1 | sort -u -T {params.tmp_dir} > {params.tmp_dir}/human.txt
-        samtools view {input.spike_in} | cut -f1 | sort -u -T {params.tmp_dir} > {params.tmp_dir}/spike_in.txt
-        # comm columns: 1 = human only, 2 = spike-in only, 3 = both
-        comm {params.tmp_dir}/human.txt {params.tmp_dir}/spike_in.txt |
-        awk -F'\t' -v OFS='\t' -v sample={wildcards.sample} \
-            -v input="$input" -v unique="$unique" -v multi="$multi" -v rescued="$rescued" '
-            $1 != "" {{ h++; next }}
-            $2 != "" {{ s++; next }}
-            {{ b++ }}
-            END {{
+        awk -v OFS='\t' -v sample={wildcards.sample} -v input="$input" -v unique="$unique" -v multi="$multi" \
+            -v rescued="$rescued" -v h="$human" -v s="$spike_in" -v b="$both" 'BEGIN {{
                 mapped = h + s + b
                 print "sample", "input_reads", "contaminant_unique", "contaminant_multi", "contaminant_rescued",
                       "clean_reads", "human_only", "spike_in_only", "both_species", "spike_in_fraction"
                 print sample, input, unique, multi, rescued, input - unique - multi + rescued,
-                      h + 0, s + 0, b + 0, (mapped ? s / mapped : 0)
+                      h, s, b, (mapped ? s / mapped : 0)
             }}' > {output}
-        rm -rf {params.tmp_dir}
         """
 
 

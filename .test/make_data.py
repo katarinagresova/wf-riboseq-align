@@ -4,8 +4,8 @@ Everything is random sequence, not real data, sized to run the whole workflow in
   human.fa              20 genes, half of them with an exon-skipping second isoform (reads multimap across
                         isoforms), plus HTX021.1, which holds the reverse complement of a HTX011.1 stretch (its
                         reads align sense and antisense: keep_sense keeps only the sense alignment)
-  yeast.fa              8 spike-in transcripts; one contains a stretch of a human transcript (its reads are in
-                        both species' BAMs: both_species)
+  yeast.fa              8 spike-in transcripts; one contains a stretch of a human transcript (its reads align
+                        to both species: in neither BAM, counted as both_species)
   contaminants.fa       rRNA / tRNA-like records, plus: a stretch of rRNA that is also inside a human transcript
                         (its reads tie: stay removed),
                         a copy of a human stretch with a mismatch every 12 nt (its reads are rescued), and a

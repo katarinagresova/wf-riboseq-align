@@ -71,12 +71,13 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
    in sense, and STAR cannot be told to align to one strand only. A read with only antisense alignments is dropped;
    for the others, NH, MAPQ and the primary flag are set again from their sense alignments
 7. `split_bam_transcriptome`: split into `human/` and `spike_in/` BAM files, sorted and indexed. A read aligned to
-   both species is in both files, with NH, MAPQ and the primary flag set again in each from its alignments there,
-   so each file stands on its own
+   both species is in neither file, as it may come from either: counted as human, a spike-in read would grow with
+   the spike-in fraction, and counted as spike-in, a human one would distort the spike-in normalisation. The kept
+   reads' records are STAR's (after `keep_sense`)
 8. `qc_library`, `qc_summary`: per-library read counts: contaminant step (input, removed as unique hits, removed as
    multi-copy hits, put back by the competitive filter, clean) and species split (human only, spike-in only, both,
    spike-in fraction = spike-in-only /
-   all mapped). Reads aligned to both species stay in both BAM files and are only counted. The run fails if any
+   all mapped). Reads aligned to both species are in neither BAM file and are only counted. The run fails if any
    library's spike-in fraction is below `min_spike_in_fraction` (default 0.01; set 0 for libraries without spike-in)
 
 FastQC (`fastqc_ribo_raw`, `fastqc_ribo_trimmed`): reports on the raw Ribo-seq fastqs and the trimmed reads that
@@ -157,7 +158,7 @@ Both wrappers activate the `snake` conda env. To use your own config: `./snakema
 
 `.test/` holds a tiny synthetic dataset: random sequences written by `.test/make_data.py`, not real reads. It is
 built so that every step has something to do: PCR duplicates, adapter dimers, contaminant reads, reads on two
-contaminants, reads that tie with or beat their contaminant alignment, reads in both species' BAMs, antisense reads,
+contaminants, reads that tie with or beat their contaminant alignment, reads aligned to both species, antisense reads,
 two experiments, and `rna` rows (skipped). The whole workflow runs on it in a few minutes:
 
 ```bash
@@ -166,7 +167,7 @@ snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
 
 CI ([.github/workflows/test.yaml](.github/workflows/test.yaml)) runs lint, a dry run and this run on every push to
 `main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads, or if
-`keep_sense` dropped no antisense-only read or moved no primary, or if the species split moved no primary.
+`keep_sense` dropped no antisense-only read or moved no primary.
 
 ## Use it from another workflow
 

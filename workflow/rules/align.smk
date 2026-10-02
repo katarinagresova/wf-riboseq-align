@@ -113,8 +113,8 @@ rule split_bed_transcriptome:
         "{output.human} {output.spike_in} 2> {log}"
 
 
-# One BAM per species. A read in both keeps its alignments in both, with NH,
-# MAPQ and the primary flag fixed in each (see the script).
+# One BAM per species. A read aligned to both is in neither: it may come from
+# either (see the script). The log counts it as both_species.
 rule split_bam_transcriptome:
     input:
         bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.sense.bam",
