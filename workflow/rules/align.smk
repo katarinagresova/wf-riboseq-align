@@ -84,7 +84,7 @@ rule star_transcript:
 rule keep_sense:
     input:
         bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
-        script=workflow.source_path("../scripts/keep_sense.py"),
+        script=workflow.source_path("../scripts/filter_alignments.py"),
     output:
         temp(f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.sense.bam"),
     log:
@@ -92,7 +92,7 @@ rule keep_sense:
     conda:
         "../envs/pysam.yaml"
     shell:
-        "python {input.script} {input.bam} {output} 2> {log}"
+        "python {input.script} sense {input.bam} {output} 2> {log}"
 
 
 rule split_bed_transcriptome:
@@ -113,10 +113,13 @@ rule split_bed_transcriptome:
         "{output.human} {output.spike_in} 2> {log}"
 
 
+# One BAM per species. A read in both keeps its alignments in both, with NH,
+# MAPQ and the primary flag fixed in each (see the script).
 rule split_bam_transcriptome:
     input:
         bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.sense.bam",
         bed=f"{RESULTS_DIR}/reference/transcripts.{{species}}.bed",
+        script=workflow.source_path("../scripts/filter_alignments.py"),
     output:
         bam=f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam",
         bai=f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai",
@@ -125,10 +128,10 @@ rule split_bam_transcriptome:
     log:
         f"{EXP_LOG_DIR}/align/split_bam/{{species}}/{{sample}}.log",
     conda:
-        "../envs/star.yaml"
+        "../envs/pysam.yaml"
     shell:
         r"""
         exec 2> {log}
-        samtools view -b -L {input.bed} {input.bam} > {output.bam}
-        samtools index {output.bam}
+        python {input.script} refs {input.bed} {input.bam} {output.bam}
+        python -c 'import sys, pysam; pysam.index(sys.argv[1])' {output.bam}
         """
