@@ -36,6 +36,10 @@ rule number_contaminants:
         "python {input.script} {input.fa} {output} 2> {log}"
 
 
+# --genomeChrBinNbits 8: STAR pads every record to a multiple of 2^bits. The
+# default 18 (262 kb) made 1 Mb of short records a 1.9 GB index; STAR's
+# recommended min(18, log2(max(length / records, read length))) is ~7-10 for
+# contaminant sets, and 256 nt bins exceed any Ribo-seq read.
 rule star_contaminant_index:
     input:
         f"{RESULTS_DIR}/reference/contaminants_numbered.fa",
@@ -49,7 +53,7 @@ rule star_contaminant_index:
         "../envs/star.yaml"
     threads: 8
     shell:
-        "STAR --genomeSAindexNbases 9 --runThreadN {threads} --runMode genomeGenerate "
+        "STAR --genomeSAindexNbases 9 --genomeChrBinNbits 8 --runThreadN {threads} --runMode genomeGenerate "
         "--genomeFastaFiles {input} --genomeDir {output} "
         "--outFileNamePrefix {params.log_prefix} > {log} 2>&1"
 
