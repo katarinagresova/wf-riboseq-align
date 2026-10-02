@@ -1,0 +1,8 @@
+sample_id,read_type,fastq_1,fastq_2,experiment
+ribo_a1,ribo,data/ribo_a.fastq.gz,,exp1
+ribo_b1,ribo,data/ribo_b.fastq.gz,,exp1
+rna_a1,rna,data/rna_a_R1.fastq.gz,data/rna_a_R2.fastq.gz,exp1
+rna_b1,rna,data/rna_b_R1.fastq.gz,data/rna_b_R2.fastq.gz,exp1
+ribo_a2,ribo,data/ribo_a.fastq.gz,,exp2
+rna_a2,rna,data/rna_a_R1.fastq.gz,data/rna_a_R2.fastq.gz,exp2
+rna_b2,rna,data/rna_b_R1.fastq.gz,data/rna_b_R2.fastq.gz,exp2

@@ -1,0 +1,30 @@
+# Lint, dry run and a full run on the synthetic test data in .test/ (see .test/make_data.py).
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: snake
+          channels: conda-forge,bioconda
+          channel-priority: strict
+      - name: Install Snakemake
+        run: conda install -y "snakemake=9.11.6" pandas
+      - name: Lint
+        run: snakemake -s workflow/Snakefile --directory .test --lint
+      - name: Dry run
+        run: snakemake -s workflow/Snakefile --directory .test -n
+      - name: Run on the test data
+        run: snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2 --show-failed-logs

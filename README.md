@@ -120,6 +120,20 @@ sbatch slurm_job.sh        # SLURM: one job per rule (workflow/profiles/slurm)
 
 Both wrappers activate the `snake` conda env. To use your own config: `./snakemake.sh --configfile my_config.yaml`.
 
+## Test data
+
+`.test/` holds a tiny synthetic dataset: random sequences written by `.test/make_data.py`, not real reads. It is
+built so that every step has something to do: PCR duplicates, adapter dimers, contaminant reads, reads that tie with
+or beat their contaminant alignment, transcripts without RNA-seq reads (for the blacklist), and two experiments. The
+whole workflow runs on it in a few minutes:
+
+```bash
+snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
+```
+
+CI ([.github/workflows/test.yaml](.github/workflows/test.yaml)) runs lint, a dry run and this run on every push to
+`main` and on pull requests.
+
 ## Use it from another workflow
 
 Import it as a Snakemake module and give it its own config block:
