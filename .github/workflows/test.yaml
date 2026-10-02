@@ -28,3 +28,9 @@ jobs:
         run: snakemake -s workflow/Snakefile --directory .test -n
       - name: Run on the test data
         run: snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2 --show-failed-logs
+      # make_data.py builds both cases in; a 0 means a change stopped exercising them
+      - name: Check that the test data has multi-contaminant and both-species reads
+        run: >-
+          awk -F'\t' 'FNR == 1 {for (i = 1; i <= NF; i++) col[$i] = i; next}
+          !$col["contaminant_multi"] || !$col["both_species"] {print FILENAME ": " $1 " has none"; bad = 1}
+          END {exit bad}' .test/results/*/qc/summary.tsv

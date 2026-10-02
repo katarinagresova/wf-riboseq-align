@@ -3,10 +3,12 @@
 Everything is random sequence, not real data, sized to run the whole workflow in a few minutes:
   human.fa, human.gtf   20 genes, half of them with an exon-skipping second isoform (reads multimap across
                         isoforms); 4 genes get no RNA-seq reads, so mode "filtered" blacklists them
-  yeast.fa              8 spike-in transcripts
+  yeast.fa              8 spike-in transcripts; one contains a stretch of a human transcript (its reads are in
+                        both species' BAMs: both_species)
   contaminants.fa       rRNA / tRNA-like records, plus: an exact duplicate (number_contaminants drops it), a
-                        stretch of rRNA that is also inside a human transcript (its reads tie: stay removed), and
-                        a copy of a human stretch with a mismatch every 12 nt (its reads are rescued)
+                        stretch of rRNA that is also inside a human transcript (its reads tie: stay removed),
+                        a copy of a human stretch with a mismatch every 12 nt (its reads are rescued), and a
+                        stretch of rRNA as its own record (its reads align to both: contaminant_multi)
   ribo_{a,b}.fastq.gz   single-end 51 nt: 4 nt randomer + insert + 4 nt randomer + adapter, with PCR duplicates,
                         too-short inserts and adapter dimers
   rna_{a,b}_R{1,2}.fastq.gz  paired-end 2x75 nt, stranded (R1 antisense)
@@ -67,9 +69,12 @@ def references():
     rescue = list(human["HTX003.1"][200:320])
     for i in range(6, len(rescue), 12):
         rescue[i] = {"A": "C", "C": "G", "G": "T", "T": "A"}[rescue[i]]
-    contaminants = {**rrna, **trna, "tRNA_1_copy": trna["tRNA_1"], "snoRNA_like_HTX003": "".join(rescue)}
+    contaminants = {**rrna, **trna, "tRNA_1_copy": trna["tRNA_1"], "snoRNA_like_HTX003": "".join(rescue),
+                    "rRNA_28S_fragment": rrna["rRNA_28S"][2000:2100]}
 
     yeast = {f"Y{c}{i:02d}W": rseq(rng.randint(800, 1500)) for i, c in enumerate("ABCDEFGH", 1)}
+    # the both-species stretch: a human stretch inside a spike-in transcript
+    yeast["YA01W"] = yeast["YA01W"][:300] + human["HTX007.1"][100:200] + yeast["YA01W"][300:]
     return human, "".join(gtf), yeast, contaminants
 
 
@@ -82,12 +87,14 @@ def insert_from(seq, lo=26, hi=34):
 def ribo_reads(human, yeast, contaminants, n_molecules):
     tx_names = list(human)
     weights = [rng.lognormvariate(0, 1) for _ in tx_names]
-    kinds = ["human", "spike_in", "contaminant", "tie", "rescue", "short", "dimer", "random"]
-    kind_weights = [60, 8, 20, 3, 3, 3, 2, 1]
+    kinds = ["human", "spike_in", "contaminant", "tie", "rescue", "contaminant_multi", "both_species", "short",
+             "dimer", "random"]
+    kind_weights = [60, 8, 20, 3, 3, 3, 3, 3, 2, 1]
     contam = [s for name, s in contaminants.items() if name != "snoRNA_like_HTX003"]
     tie = human["HTX001.1"]
     tie = tie[tie.index(contaminants["rRNA_28S"][1000:1100]):][:100]
     rescue = human["HTX003.1"][200:320]
+    both_species = human["HTX007.1"][100:200]
 
     reads = []
     for _ in range(n_molecules):
@@ -102,6 +109,10 @@ def ribo_reads(human, yeast, contaminants, n_molecules):
             insert = insert_from(tie)
         elif kind == "rescue":
             insert = insert_from(rescue)
+        elif kind == "contaminant_multi":
+            insert = insert_from(contaminants["rRNA_28S_fragment"])
+        elif kind == "both_species":
+            insert = insert_from(both_species)
         elif kind == "short":
             insert = insert_from(rng.choice(list(human.values())), 4, 9)
         elif kind == "dimer":

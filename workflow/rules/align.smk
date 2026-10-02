@@ -40,7 +40,7 @@ rule star_transcript_index:
 
 
 # Multimappers are kept (up to 255 loci); STAR marks one alignment per read
-# primary, chosen at random among equally good loci. CLEAN_FASTQ: Snakefile.
+# primary, chosen at random among equally good loci. CLEAN_FASTQ: common.smk.
 rule star_transcript:
     input:
         fastq=CLEAN_FASTQ,

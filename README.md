@@ -95,8 +95,8 @@ experiment, directly in `RESULTS_DIR`.
 1. **Conda or mamba**, with the `bioconda` and `conda-forge` channels reachable. Used both to create the env below
    and, via `use-conda: true` in the profiles, to auto-build one isolated env per rule from `workflow/envs/*.yaml`
    on first run.
-2. **A `snake` env** with Snakemake and pandas (the `Snakefile` itself does `import pandas`, outside any per-rule
-   env):
+2. **A `snake` env** with Snakemake and pandas (`workflow/rules/common.smk` itself does `import pandas`, outside any
+   per-rule env):
    ```bash
    mamba create -n snake -c conda-forge -c bioconda "snakemake=9.11" pandas
    ```
@@ -123,16 +123,16 @@ Both wrappers activate the `snake` conda env. To use your own config: `./snakema
 ## Test data
 
 `.test/` holds a tiny synthetic dataset: random sequences written by `.test/make_data.py`, not real reads. It is
-built so that every step has something to do: PCR duplicates, adapter dimers, contaminant reads, reads that tie with
-or beat their contaminant alignment, transcripts without RNA-seq reads (for the blacklist), and two experiments. The
-whole workflow runs on it in a few minutes:
+built so that every step has something to do: PCR duplicates, adapter dimers, contaminant reads, reads on two
+contaminants, reads that tie with or beat their contaminant alignment, reads in both species' BAMs, transcripts
+without RNA-seq reads (for the blacklist), and two experiments. The whole workflow runs on it in a few minutes:
 
 ```bash
 snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
 ```
 
 CI ([.github/workflows/test.yaml](.github/workflows/test.yaml)) runs lint, a dry run and this run on every push to
-`main` and on pull requests.
+`main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads.
 
 ## Use it from another workflow
 
