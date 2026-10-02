@@ -22,18 +22,32 @@ rule build_contaminants:
         "python {input.script} {output} 2> {log}"
 
 
+# As number_contaminants.R in the eIF pipeline: STAR needs unique reference
+# names, and identical sequences would only split reads between the copies, so
+# keep the first record of each sequence and prefix its name with a running
+# number; 80-column fasta. Characters outside the IUPAC DNA alphabet are dropped,
+# as Biostrings did silently; the log names those records (the eIF contaminants
+# fasta has stray text in two). rmdup -P: seqkit would otherwise also drop
+# reverse-complement copies.
 rule number_contaminants:
     input:
-        fa=config["contaminants_fa"],
-        script=workflow.source_path("../scripts/number_contaminants.py"),
+        config["contaminants_fa"],
     output:
         f"{RESULTS_DIR}/reference/contaminants_numbered.fa",
     log:
         f"{LOG_DIR}/number_contaminants.log",
     conda:
-        "../envs/python.yaml"
+        "../envs/seqkit.yaml"
     shell:
-        "python {input.script} {input.fa} {output} 2> {log}"
+        r"""
+        exec 2> {log}
+        seqkit grep -s -r -i -P -p '[^ACGTMRWSYKVHDBN.+-]' {input} |
+            seqkit seq -n | sed 's/^/WARNING non-IUPAC characters dropped: /' >&2
+        seqkit seq -u {input} |
+            seqkit replace -s -p '[^ACGTMRWSYKVHDBN.+-]' -r '' |
+            seqkit rmdup -s -P |
+            seqkit replace -p '^' -r '{{nr}}_' -w 80 > {output}
+        """
 
 
 # --genomeChrBinNbits 8: STAR pads every record to a multiple of 2^bits. The
