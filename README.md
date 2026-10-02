@@ -59,7 +59,8 @@ simply (nearly) empty. `filtered` needs `read_type=rna` rows in `samples.csv`.
 
 `config/config.yaml` contains `mode`, the cutadapt parameters, the contaminant fasta, the human transcriptome
 fasta + gtf, the spike-in transcriptome fasta, `min_spike_in_fraction`, and the `autofilter` thresholds. Every key is commented in the file.
-Fill in the placeholder paths with your own data and references before running.
+Fill in the placeholder paths with your own data and references before running. The workflow checks both
+files against [workflow/schemas/](workflow/schemas/) when it starts, so a misspelt config key is an error.
 
 ## Outputs (under `RESULTS_DIR`, default `results/`)
 

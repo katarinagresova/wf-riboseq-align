@@ -61,7 +61,7 @@ rule qc_summary:
     output:
         f"{EXP_DIR}/qc/summary.tsv",
     params:
-        min_spike_in_fraction=config.get("min_spike_in_fraction", 0.01),
+        min_spike_in_fraction=config["min_spike_in_fraction"],
     log:
         f"{EXP_LOG_DIR}/qc/qc_summary.log",
     conda:

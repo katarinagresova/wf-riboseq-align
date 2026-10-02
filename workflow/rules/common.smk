@@ -3,11 +3,16 @@
 import re
 
 import pandas as pd
+from snakemake.utils import validate
 
-RESULTS_DIR = config.get("RESULTS_DIR", "results")
-LOG_DIR = config.get("LOG_DIR", "logs")
+# also fills in the defaults (RESULTS_DIR, LOG_DIR, min_spike_in_fraction)
+validate(config, "../schemas/config.schema.yaml")
+
+RESULTS_DIR = config["RESULTS_DIR"]
+LOG_DIR = config["LOG_DIR"]
 
 samples = pd.read_csv(config["samples"], dtype=str).set_index("sample_id", drop=False)
+validate(samples, "../schemas/samples.schema.yaml")
 if samples.index.duplicated().any():
     raise ValueError(f"samples.csv: duplicate sample_id {sorted(set(samples.index[samples.index.duplicated()]))}")
 
@@ -19,12 +24,9 @@ if samples.index.duplicated().any():
 # index) are always directly in RESULTS_DIR (reference/, star_index/) and
 # LOG_DIR (star/), so they are built once.
 if "experiment" in samples.columns:
-    if samples["experiment"].isna().any() or samples["experiment"].str.contains("/").any():
-        raise ValueError("samples.csv: every row needs an experiment, and an experiment cannot contain '/'")
+    if samples["experiment"].isna().any():
+        raise ValueError("samples.csv: with an experiment column, every row needs an experiment")
     EXPERIMENTS = sorted(set(samples["experiment"]))
-    if set(EXPERIMENTS) & {"reference", "star_index", "star"}:
-        raise ValueError("samples.csv: experiments cannot be named reference, star_index or star "
-                         "(the shared outputs' directories)")
     EXP_DIR = f"{RESULTS_DIR}/{{experiment}}"
     EXP_LOG_DIR = f"{LOG_DIR}/{{experiment}}"
 
@@ -59,13 +61,9 @@ if MODE == "filtered":
     HUMAN_TRANSCRIPTOME_FA = f"{EXP_DIR}/reference/human_transcriptome.rnaseq_filtered.fa"
 elif MODE == "unfiltered":
     HUMAN_TRANSCRIPTOME_FA = config["human_transcriptome_fa"]
-else:
-    raise ValueError(f"config 'mode' must be 'filtered' or 'unfiltered', got {MODE!r}")
 
 # What star_transcript maps: star_contaminant's clean fastq plus the reads
 # contaminant_compete puts back.
-if "contaminant_filter" in config:
-    raise ValueError("config 'contaminant_filter' was removed: the competitive contaminant filter always runs")
 CLEAN_FASTQ = f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.gz"
 
 

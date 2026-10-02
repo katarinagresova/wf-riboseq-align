@@ -1,0 +1,63 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: wf-riboseq-align config. config/config.yaml documents each key.
+type: object
+additionalProperties: false
+properties:
+  samples:
+    type: string
+  RESULTS_DIR:
+    type: string
+    default: results
+  LOG_DIR:
+    type: string
+    default: logs
+  mode:
+    enum: [filtered, unfiltered]
+  adapter:
+    type: string
+  minlength:
+    type: integer
+    minimum: 0
+  maxlength:
+    type: integer
+    minimum: 0
+  qualcutoff:
+    type: integer
+    minimum: 0
+  contaminants_fa:
+    type: string
+  human_transcriptome_fa:
+    type: string
+  human_transcriptome_gtf:
+    type: string
+  spike_in_transcriptome_fa:
+    type: string
+  min_spike_in_fraction:
+    type: number
+    minimum: 0
+    maximum: 1
+    default: 0.01
+  autofilter:
+    type: object
+    additionalProperties: false
+    properties:
+      min_tpm:
+        type: number
+        minimum: 0
+      min_samples:
+        type: integer
+        minimum: 1
+    required: [min_tpm, min_samples]
+# all rules are parsed in both modes, so the filtered-mode keys are needed in unfiltered mode too
+required:
+  - samples
+  - mode
+  - adapter
+  - minlength
+  - maxlength
+  - qualcutoff
+  - contaminants_fa
+  - human_transcriptome_fa
+  - human_transcriptome_gtf
+  - spike_in_transcriptome_fa
+  - autofilter

@@ -1,0 +1,30 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: One row of samples.csv. Other columns are allowed and ignored.
+type: object
+properties:
+  sample_id:
+    type: string
+  read_type:
+    enum: [ribo, rna]
+  fastq_1:
+    type: string
+  fastq_2:
+    type: string
+    description: R2, for read_type rna only
+  experiment:
+    type: string
+    description: >-
+      optional column. Not reference, star_index or star: the experiment-independent outputs' directories
+    pattern: "^[^/]+$"
+    not:
+      enum: [reference, star_index, star]
+required: [sample_id, read_type, fastq_1]
+if:
+  properties:
+    read_type:
+      const: rna
+then:
+  required: [fastq_2]
+else:
+  not:
+    required: [fastq_2]
