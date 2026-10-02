@@ -41,6 +41,7 @@ rule star_transcript_rnaseq:
         bam=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam",
         bai=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.bam.bai",
         unsorted_bam=temp(f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Aligned.out.bam"),
+        log_final=f"{EXP_DIR}/star/transcriptome_rnaseq/{{sample}}/{{sample}}.transcript_Log.final.out",
     log:
         f"{EXP_LOG_DIR}/star/transcriptome_rnaseq/{{sample}}.log",
     params:

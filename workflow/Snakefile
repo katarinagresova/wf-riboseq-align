@@ -11,6 +11,7 @@ include: "rules/autofilter.smk"
 include: "rules/align.smk"
 include: "rules/qc.smk"
 include: "rules/fastqc.smk"
+include: "rules/multiqc.smk"
 
 
 rule all:
@@ -20,6 +21,7 @@ rule all:
                 experiment_files(f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam.bai", e, "ribo",
                                  species=["human", "spike_in"]),
                 expand(f"{EXP_DIR}/qc/summary.tsv", **({} if e is None else {"experiment": e})),
+                expand(f"{EXP_DIR}/multiqc/multiqc_report.html", **({} if e is None else {"experiment": e})),
                 experiment_files(f"{EXP_DIR}/salmon/{{sample}}/quant.sf", e, "rna"),
                 experiment_files(f"{EXP_DIR}/salmon/{{sample}}/quant.rnaseq_filtered.sf", e, "rna")
                 if MODE == "filtered" else [],

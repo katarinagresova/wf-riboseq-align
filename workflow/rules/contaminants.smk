@@ -120,8 +120,10 @@ rule contaminant_compete_align:
         removed=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz"),
         contaminant=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz"),
         transcriptome=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz"),
+        log_final=f"{EXP_DIR}/filter_reads/{{sample}}/compete/{{sample}}.transcriptome_Log.final.out",
+    # the sample in STAR's file names: MultiQC names a STAR report after its file
     params:
-        prefix=f"{EXP_DIR}/filter_reads/{{sample}}/compete/",
+        prefix=f"{EXP_DIR}/filter_reads/{{sample}}/compete/{{sample}}.",
         star_args=RIBO_TRANSCRIPTOME_STAR_ARGS,
     log:
         f"{EXP_LOG_DIR}/contaminant_compete/{{sample}}.align.log",

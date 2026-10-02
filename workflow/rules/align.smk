@@ -46,7 +46,8 @@ rule star_transcript:
         fastq=CLEAN_FASTQ,
         index=f"{EXP_DIR}/star_index/transcriptome",
     output:
-        f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
+        bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
+        log_final=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_Log.final.out",
     log:
         f"{EXP_LOG_DIR}/star/transcriptome/{{sample}}.log",
     params:
@@ -71,7 +72,7 @@ rule star_transcript:
             --readFilesIn {input.fastq} \
             --readFilesCommand zcat
 
-        samtools sort -@ {threads} {params.prefix}Aligned.out.bam -o {output}
+        samtools sort -@ {threads} {params.prefix}Aligned.out.bam -o {output.bam}
         rm {params.prefix}Aligned.out.bam
         """
 

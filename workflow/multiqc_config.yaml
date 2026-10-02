@@ -1,0 +1,47 @@
+# MultiQC config for rule multiqc (rules/multiqc.smk). The four STAR steps
+# report the same sample names, and so do the raw and trimmed Ribo-seq FastQC,
+# so each gets its own section, selected by path.
+no_version_check: true
+# cutadapt: name after its log (<sample>.log), not after the fastq it read
+use_filename_as_sample_name:
+  - cutadapt
+# <sample>.contam_Log.final.out, <sample>.transcript(ome)_Log.final.out -> <sample>
+extra_fn_clean_exts:
+  - ".contam"
+  - ".transcript"
+module_order:
+  - cutadapt
+  - star:
+      name: "STAR: contaminants"
+      anchor: star_contaminant
+      path_filters:
+        - "*.contam_Log.final.out"
+  - star:
+      name: "STAR: competitive filter"
+      anchor: star_compete
+      info: "contaminant_compete_align: the reads STAR aligned to a contaminant, aligned to the transcriptome."
+      path_filters:
+        - "*/compete/*"
+  - star:
+      name: "STAR: Ribo-seq transcriptome"
+      anchor: star_transcript
+      path_filters:
+        - "*/star/transcriptome/*"
+  - star:
+      name: "STAR: RNA-seq transcriptome"
+      anchor: star_transcript_rnaseq
+      path_filters:
+        - "*/star/transcriptome_rnaseq/*"
+  - salmon
+  - fastqc:
+      name: "FastQC: raw"
+      anchor: fastqc_raw
+      path_filters:
+        - "*/fastqc/ribo_raw/*"
+        - "*/fastqc/rna_raw/*"
+  - fastqc:
+      name: "FastQC: trimmed Ribo-seq"
+      anchor: fastqc_trimmed
+      info: "What star_contaminant maps: adapter-trimmed, collapsed, randomers removed."
+      path_filters:
+        - "*/fastqc/ribo_trimmed/*"

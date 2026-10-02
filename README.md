@@ -72,6 +72,7 @@ salmon/<sample>/quant.rnaseq_filtered.sf             (mode filtered) the same, b
 qc/<sample>.stats.tsv, qc/summary.tsv                Ribo-seq read counts per library (collapsed reads)
 fastqc/{ribo_raw,ribo_trimmed}/<sample>_fastqc.{html,zip}   FastQC, Ribo-seq before and after trimming
 fastqc/rna_raw/<sample>_R{1,2}_fastqc.{html,zip}              FastQC, raw RNA-seq
+multiqc/multiqc_report.html                          MultiQC: cutadapt, each STAR step, salmon, FastQC
 reference/                                           the references these were aligned to
   transcriptome.combined_human_spike_in.fa           (the BAM @SQ lines refer to this)
   human_transcriptome.rnaseq_filtered.{fa,gtf}       (mode filtered)
