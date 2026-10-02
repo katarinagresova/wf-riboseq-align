@@ -3,19 +3,19 @@
 Everything is random sequence, not real data, sized to run the whole workflow in a few minutes:
   human.fa              20 genes, half of them with an exon-skipping second isoform (reads multimap across
                         isoforms), plus HTX021.1, which holds the reverse complement of a HTX011.1 stretch (its
-                        reads align sense and antisense: keep_sense keeps only the sense alignment)
+                        reads align to HTX011.1 only: bowtie_align aligns sense only)
   yeast.fa              8 spike-in transcripts; one contains a stretch of a human transcript (its reads align
                         to both species: in neither BAM, counted as both_species)
   contaminants.fa       rRNA / tRNA-like records, plus: a stretch of rRNA that is also inside a human transcript
                         (its reads tie: stay removed),
                         a copy of a human stretch with a mismatch every 12 nt (its reads are rescued), a
                         stretch of rRNA as its own record (its reads align to both: contaminant_multi), the
-                        reverse complement of a HTX015.1 stretch (its reads align to it antisense only: put back,
-                        rescued_by_strand) and the reverse complement of the tie stretch (its reads align to rRNA
-                        sense too: still a tie whichever STAR reports, antisense_picks_with_sense)
+                        reverse complement of a HTX015.1 stretch (its reads are antisense to it only: plain
+                        transcriptome reads) and the reverse complement of the tie stretch (the tie reads hit
+                        rRNA_28S only)
   ribo_{a,b}.fastq.gz   single-end 51 nt: 4 nt randomer + insert + 4 nt randomer + adapter, with PCR duplicates,
                         too-short inserts and adapter dimers. At the end: reads antisense to a human transcript
-                        (keep_sense drops them), reads on the HTX011.1 stretch and reads on the HTX015.1 stretch
+                        (unaligned), reads on the HTX011.1 stretch and reads on the HTX015.1 stretch
   rna_{a,b}_R{1,2}.fastq.gz  paired-end 2x75 nt, stranded (R1 antisense), none on 4 genes. Only for samples.csv's
                         read_type=rna rows, which the workflow skips; they share the Ribo-seq reads' random stream,
                         so dropping them would change those
@@ -186,7 +186,7 @@ def main():
     write_fasta(f"{OUT}/human.fa", {**human, **antisense_transcript(human)})
     write_fasta(f"{OUT}/yeast.fa", yeast)
     # without tRNA_1_copy, which only doubles tRNA_1's share of the contaminant reads (it was a duplicate record for
-    # number_contaminants to drop; contaminants_fa now goes to STAR as is)
+    # number_contaminants to drop; contaminants_fa now goes to bowtie_index as is)
     write_fasta(f"{OUT}/contaminants.fa", {**{n: s for n, s in contaminants.items() if n != "tRNA_1_copy"},
                                           **strand_contaminants(human, contaminants)})
 
