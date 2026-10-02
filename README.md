@@ -20,7 +20,7 @@ flowchart TD
     ref["<b>Ribo-seq reference</b><br>combined_transcriptome,<br>star_transcript_index,<br>split_bed_transcriptome"]
     trim["<b>Ribo-seq preprocessing</b><br>cutadapt_reads,<br>collapse_reads, trim_reads"]
     contam["<b>Contaminant filter</b><br>number_contaminants,<br>star_contaminant_index,<br>star_contaminant,<br>contaminant_compete_align,<br>contaminant_compete"]
-    align["<b>Ribo-seq alignment</b><br>star_transcript,<br>split_bam_transcriptome"]
+    align["<b>Ribo-seq alignment</b><br>star_transcript,<br>keep_sense,<br>split_bam_transcriptome"]
     qc["<b>Read counts</b><br>qc_library, qc_summary"]
 
     bams(["split_bam/transcriptome/<br>{human,spike_in}/*.bam"])
@@ -67,8 +67,11 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
    index and parameters) scores higher (STAR AS) than its contaminant alignment. A tie stays discarded (see
    Differences below)
 5. `star_transcript`: map to the human + spike-in transcriptome (multimappers kept, up to 255 loci)
-6. `split_bam_transcriptome`: split into `human/` and `spike_in/` BAM files, sorted and indexed
-7. `qc_library`, `qc_summary`: per-library read counts: contaminant step (input, removed as unique hits, removed as
+6. `keep_sense`: drop the antisense alignments. The libraries are stranded, so a footprint aligns to its transcript
+   in sense, and STAR cannot be told to align to one strand only. A read with only antisense alignments is dropped;
+   for the others, NH, MAPQ and the primary flag are set again from their sense alignments
+7. `split_bam_transcriptome`: split into `human/` and `spike_in/` BAM files, sorted and indexed
+8. `qc_library`, `qc_summary`: per-library read counts: contaminant step (input, removed as unique hits, removed as
    multi-copy hits, put back by the competitive filter, clean) and species split (human only, spike-in only, both,
    spike-in fraction = spike-in-only /
    all mapped). Reads aligned to both species stay in both BAM files and are only counted. The run fails if any
@@ -151,15 +154,16 @@ Both wrappers activate the `snake` conda env. To use your own config: `./snakema
 
 `.test/` holds a tiny synthetic dataset: random sequences written by `.test/make_data.py`, not real reads. It is
 built so that every step has something to do: PCR duplicates, adapter dimers, contaminant reads, reads on two
-contaminants, reads that tie with or beat their contaminant alignment, reads in both species' BAMs, two experiments,
-and `rna` rows (skipped). The whole workflow runs on it in a few minutes:
+contaminants, reads that tie with or beat their contaminant alignment, reads in both species' BAMs, antisense reads,
+two experiments, and `rna` rows (skipped). The whole workflow runs on it in a few minutes:
 
 ```bash
 snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
 ```
 
 CI ([.github/workflows/test.yaml](.github/workflows/test.yaml)) runs lint, a dry run and this run on every push to
-`main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads.
+`main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads, or if
+`keep_sense` dropped no antisense-only read or moved no primary.
 
 ## Use it from another workflow
 

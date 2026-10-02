@@ -1,0 +1,8 @@
+# own env, not python.yaml: changing that env would rerun every rule that uses it
+name: pysam
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.14.7
+  - pysam=0.24.1

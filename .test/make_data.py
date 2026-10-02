@@ -2,7 +2,8 @@
 
 Everything is random sequence, not real data, sized to run the whole workflow in a few minutes:
   human.fa              20 genes, half of them with an exon-skipping second isoform (reads multimap across
-                        isoforms)
+                        isoforms), plus HTX021.1, which holds the reverse complement of a HTX011.1 stretch (its
+                        reads align sense and antisense: keep_sense keeps only the sense alignment)
   yeast.fa              8 spike-in transcripts; one contains a stretch of a human transcript (its reads are in
                         both species' BAMs: both_species)
   contaminants.fa       rRNA / tRNA-like records, plus: an exact duplicate (number_contaminants drops it), a
@@ -10,7 +11,8 @@ Everything is random sequence, not real data, sized to run the whole workflow in
                         a copy of a human stretch with a mismatch every 12 nt (its reads are rescued), and a
                         stretch of rRNA as its own record (its reads align to both: contaminant_multi)
   ribo_{a,b}.fastq.gz   single-end 51 nt: 4 nt randomer + insert + 4 nt randomer + adapter, with PCR duplicates,
-                        too-short inserts and adapter dimers
+                        too-short inserts and adapter dimers. At the end: reads antisense to a human transcript
+                        (keep_sense drops them) and reads on the HTX011.1 stretch
   rna_{a,b}_R{1,2}.fastq.gz  paired-end 2x75 nt, stranded (R1 antisense), none on 4 genes. Only for samples.csv's
                         read_type=rna rows, which the workflow skips; they share the Ribo-seq reads' random stream,
                         so dropping them would change those
@@ -22,10 +24,13 @@ import random
 ADAPTER = "TGGAATTCTCGGGTGCCAAGG"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 rng = random.Random(1)
+# the antisense cases (HTX021.1 and the reads at the end of ribo_*) have their own stream, so adding them left
+# every other read and record unchanged
+antisense_rng = random.Random(2)
 
 
-def rseq(n):
-    return "".join(rng.choice("ACGT") for _ in range(n))
+def rseq(n, r=rng):
+    return "".join(r.choice("ACGT") for _ in range(n))
 
 
 def revcomp(s):
@@ -72,9 +77,9 @@ def references():
     return human, yeast, contaminants
 
 
-def insert_from(seq, lo=26, hi=34):
-    n = min(rng.randint(lo, hi), len(seq))
-    p = rng.randint(0, len(seq) - n)
+def insert_from(seq, lo=26, hi=34, r=rng):
+    n = min(r.randint(lo, hi), len(seq))
+    p = r.randint(0, len(seq) - n)
     return seq[p:p + n]
 
 
@@ -119,6 +124,26 @@ def ribo_reads(human, yeast, contaminants, n_molecules):
     return [(f"r{i}", r) for i, r in enumerate(reads)]
 
 
+def antisense_transcript(human):
+    # the reverse complement of a HTX011.1 stretch, between random sequence
+    r = antisense_rng
+    return {"HTX021.1": rseq(150, r) + revcomp(human["HTX011.1"][100:200]) + rseq(150, r)}
+
+
+def antisense_reads(human, n_molecules, first):
+    # alternately: antisense to a human transcript, and on the HTX011.1 stretch that HTX021.1 holds antisense
+    r = antisense_rng
+    tx_names = list(human)
+    reads = []
+    for i in range(n_molecules):
+        if i % 2:
+            insert = revcomp(insert_from(human[r.choice(tx_names)], r=r))
+        else:
+            insert = insert_from(human["HTX011.1"][100:200], r=r)
+        reads.append((f"r{first + i}", (rseq(4, r) + insert + rseq(4, r) + ADAPTER + rseq(20, r))[:51]))
+    return reads
+
+
 def rna_reads(human, n_pairs, silent):
     tx_names = [t for t in human if t.split(".")[0] not in silent]
     weights = [rng.lognormvariate(0, 1) for _ in tx_names]
@@ -136,13 +161,14 @@ def rna_reads(human, n_pairs, silent):
 def main():
     os.makedirs(OUT, exist_ok=True)
     human, yeast, contaminants = references()
-    write_fasta(f"{OUT}/human.fa", human)
+    write_fasta(f"{OUT}/human.fa", {**human, **antisense_transcript(human)})
     write_fasta(f"{OUT}/yeast.fa", yeast)
     write_fasta(f"{OUT}/contaminants.fa", contaminants)
 
     silent = {"HTX005", "HTX009", "HTX013", "HTX017"}  # single-isoform genes without RNA-seq reads
     for lib in "ab":
-        write_fastq(f"{OUT}/ribo_{lib}.fastq.gz", ribo_reads(human, yeast, contaminants, 1500))
+        ribo = ribo_reads(human, yeast, contaminants, 1500)
+        write_fastq(f"{OUT}/ribo_{lib}.fastq.gz", ribo + antisense_reads(human, 60, len(ribo)))
         r1, r2 = rna_reads(human, 2000, silent)
         write_fastq(f"{OUT}/rna_{lib}_R1.fastq.gz", r1)
         write_fastq(f"{OUT}/rna_{lib}_R2.fastq.gz", r2)

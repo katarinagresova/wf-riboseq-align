@@ -48,7 +48,7 @@ rule star_transcript:
         fastq=CLEAN_FASTQ,
         index=f"{RESULTS_DIR}/star_index/transcriptome",
     output:
-        bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
+        bam=temp(f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam"),
         log_final=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_Log.final.out",
     log:
         f"{EXP_LOG_DIR}/star/transcriptome/{{sample}}.log",
@@ -79,6 +79,22 @@ rule star_transcript:
         """
 
 
+# The libraries are stranded: drop the antisense alignments and fix NH, MAPQ and
+# the primary flag of the reads that had any (see the script).
+rule keep_sense:
+    input:
+        bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
+        script=workflow.source_path("../scripts/keep_sense.py"),
+    output:
+        f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.sense.bam",
+    log:
+        f"{EXP_LOG_DIR}/align/keep_sense/{{sample}}.log",
+    conda:
+        "../envs/pysam.yaml"
+    shell:
+        "python {input.script} {input.bam} {output} 2> {log}"
+
+
 rule split_bed_transcriptome:
     input:
         chrom_sizes=f"{RESULTS_DIR}/star_index/transcriptome/chrNameLength.txt",
@@ -99,7 +115,7 @@ rule split_bed_transcriptome:
 
 rule split_bam_transcriptome:
     input:
-        bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.bam",
+        bam=f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.sense.bam",
         bed=f"{RESULTS_DIR}/reference/transcripts.{{species}}.bed",
     output:
         bam=f"{EXP_DIR}/split_bam/transcriptome/{{species}}/{{sample}}.bam",

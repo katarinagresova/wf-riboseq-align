@@ -34,3 +34,8 @@ jobs:
           awk -F'\t' 'FNR == 1 {for (i = 1; i <= NF; i++) col[$i] = i; next}
           !$col["contaminant_multi"] || !$col["both_species"] {print FILENAME ": " $1 " has none"; bad = 1}
           END {exit bad}' .test/results/*/qc/summary.tsv
+      - name: Check that keep_sense dropped antisense-only reads and moved a primary in every library
+        run: >-
+          awk -F'\t' '{n[FILENAME, $1] = $2; files[FILENAME]}
+          END {for (f in files) if (!n[f, "antisense_only_reads"] || !n[f, "primary_moved"]) {print f ": none"; bad = 1};
+          exit bad}' .test/logs/*/align/keep_sense/*.log
