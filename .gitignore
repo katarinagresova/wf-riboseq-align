@@ -140,6 +140,7 @@ cython_debug/
 
 # Claude
 CLAUDE.md
+PLAN.md
 
 # Mac
 .DS_Store
