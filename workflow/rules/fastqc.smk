@@ -1,5 +1,5 @@
 # FastQC at two points: raw Ribo-seq, and the trimmed Ribo-seq that
-# star_contaminant maps (after cutadapt_reads, collapse_reads and trim_reads,
+# bowtie_align aligns (after cutadapt_reads, collapse_reads and trim_reads,
 # so collapsed: its duplication plot is ~flat). Reports only; no rule reads them.
 #
 # FastQC names its report after the input file, so each job links its fastq

@@ -8,7 +8,7 @@ so the four canonical full-length rRNAs are added from NCBI RefSeq. Also
 carries over 12 Illumina TruSeq/RPI index-barcode sequences and 2 synthetic
 RNA size-marker oligos: wet-lab protocol sequences that aren't in any
 database, copied verbatim from the lab's existing contaminants.combined_human_yeast.fa.
-Writes the set as star_contaminant_index takes it: one record per sequence, numbered.
+Writes the set as bowtie_index takes it: one record per sequence, numbered.
 
 Usage: build_contaminants.py <out.fa>
 """
@@ -113,7 +113,7 @@ def main():
     records += ensembl_ncrna(YEAST_NCRNA_URL, "yeast")
     records += LITERAL_SEQUENCES.items()
 
-    # STAR needs unique reference names (gene symbols repeat: 839 human_Y_RNA), and
+    # bowtie needs unique reference names (gene symbols repeat: 839 human_Y_RNA), and
     # identical sequences would only split reads between the copies: keep the first
     # record of each sequence (one strand: a reverse-complement copy stays) and
     # prefix its name with a running number; 80-column fasta.

@@ -1,32 +1,39 @@
-# MultiQC config for rule multiqc (rules/multiqc.smk). The three STAR steps
-# report the same sample names, and so do the raw and trimmed Ribo-seq FastQC,
-# so each gets its own section, selected by path.
+# MultiQC config for rule multiqc (rules/multiqc.smk). The raw and trimmed
+# Ribo-seq FastQC report the same sample names, so each gets its own section,
+# selected by path.
 no_version_check: true
 # cutadapt: name after its log (<sample>.log), not after the fastq it read
 use_filename_as_sample_name:
   - cutadapt
-# <sample>.contam_Log.final.out, <sample>.transcript(ome)_Log.final.out -> <sample>
-extra_fn_clean_exts:
-  - ".contam"
-  - ".transcript"
+# bowtie_align's <sample>.assign.tsv: one row per library (sample = its first
+# column), the classes of assign_reads.py stacked
+custom_data:
+  bowtie_assign:
+    section_name: "bowtie: read assignment"
+    description: >-
+      bowtie_align: each trimmed read by its best alignments to the transcriptome and the contaminants
+      (assign_reads.py). transcriptome and rescued reads go to the BAMs; a tie stays removed.
+    plot_type: bargraph
+    categories:
+      - transcriptome
+      - rescued
+      - tie
+      - contaminant_better
+      - contaminant_only
+      - too_many_loci
+      - over_mismatch_cap
+      - unaligned
+    pconfig:
+      id: bowtie_assign_plot
+      title: "bowtie: read assignment"
+      ylab: "Reads"
+sp:
+  bowtie_assign:
+    fn: "*.assign.tsv"
 module_order:
   - cutadapt
-  - star:
-      name: "STAR: contaminants"
-      anchor: star_contaminant
-      path_filters:
-        - "*.contam_Log.final.out"
-  - star:
-      name: "STAR: competitive filter"
-      anchor: star_compete
-      info: "contaminant_compete_align: the reads STAR aligned to a contaminant, aligned to the transcriptome."
-      path_filters:
-        - "*/compete/*"
-  - star:
-      name: "STAR: Ribo-seq transcriptome"
-      anchor: star_transcript
-      path_filters:
-        - "*/star/transcriptome/*"
+  # bowtie_assign (custom_data); unlisted, custom content goes first
+  - custom_content
   - fastqc:
       name: "FastQC: raw"
       anchor: fastqc_raw
@@ -35,6 +42,6 @@ module_order:
   - fastqc:
       name: "FastQC: trimmed Ribo-seq"
       anchor: fastqc_trimmed
-      info: "What star_contaminant maps: adapter-trimmed, collapsed, randomers removed."
+      info: "What bowtie_align aligns: adapter-trimmed, collapsed, randomers removed."
       path_filters:
         - "*/fastqc/ribo_trimmed/*"

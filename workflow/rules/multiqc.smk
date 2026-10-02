@@ -1,12 +1,11 @@
-# One MultiQC report per experiment: cutadapt, the three STAR steps
-# (star_contaminant, contaminant_compete_align, star_transcript) and FastQC.
-# Sections and sample names: workflow/multiqc_config.yaml. qc/summary.tsv
-# stays: MultiQC does not count rescued reads or the species split.
+# One MultiQC report per experiment: cutadapt, bowtie_align's read classes (its
+# assign tsv, as custom content) and FastQC. Sections and sample names:
+# workflow/multiqc_config.yaml. qc/summary.tsv stays: MultiQC does not show the
+# species split. bowtie's own log is not shown: its "aligned" mixes contaminant
+# and transcript hits.
 MULTIQC_REPORTS = [
     f"{EXP_LOG_DIR}/cutadapt/{{sample}}.log",
-    f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
-    f"{EXP_DIR}/filter_reads/{{sample}}/compete/{{sample}}.transcriptome_Log.final.out",
-    f"{EXP_DIR}/star/transcriptome/{{sample}}/{{sample}}.transcript_Log.final.out",
+    f"{EXP_DIR}/bowtie/{{sample}}.assign.tsv",
     f"{EXP_DIR}/fastqc/ribo_raw/{{sample}}_fastqc.zip",
     f"{EXP_DIR}/fastqc/ribo_trimmed/{{sample}}_fastqc.zip",
 ]

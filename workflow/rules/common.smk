@@ -30,9 +30,9 @@ wildcard_constraints:
 # own outputs under {RESULTS_DIR}/{experiment}/ (logs under
 # {LOG_DIR}/{experiment}/). Without the column the run is one experiment,
 # directly in RESULTS_DIR / LOG_DIR. The experiment-independent outputs (the
-# contaminant set, the Ribo-seq reference and both STAR indexes) are always
-# directly in RESULTS_DIR (reference/, star_index/) and LOG_DIR (star/), so
-# they are built once.
+# contaminant set, the species BEDs and the bowtie index) are always directly
+# in RESULTS_DIR (reference/, bowtie_index/) and LOG_DIR, so they are built
+# once.
 if "experiment" in samples.columns:
     if samples["experiment"].isna().any():
         raise ValueError("samples.csv: with an experiment column, every row needs an experiment")
@@ -59,44 +59,6 @@ def experiment_files(pattern, experiment, read_type, **wildcards):
     if experiment is not None:
         wildcards["experiment"] = experiment
     return expand(pattern, sample=experiment_samples(experiment, read_type), **wildcards)
-
-
-# What star_transcript maps: star_contaminant's clean fastq plus the reads
-# contaminant_compete puts back.
-CLEAN_FASTQ = f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.competitive.fastq.gz"
-
-
-# star_transcript's alignment settings. contaminant_compete_align uses the same
-# ones: it compares a read's contaminant AS with the AS star_transcript would
-# give it. --outMultimapperOrder Random makes star_transcript's primary pick
-# among equally-good loci random, as its comment claims (STAR's default order
-# is fixed, not random). It is not reproducible with > 1 thread, seed or not
-# (777 is STAR's default): each thread seeds its RNG with runRNGseed *
-# (thread + 1), and which thread maps which reads varies from run to run, so a
-# multimapper's primary can change between runs; its alignments do not.
-# Accepted (2026-10-02). contaminant_compete_align ignores which alignment is
-# primary, so this does not change its output.
-RIBO_TRANSCRIPTOME_STAR_ARGS = (
-    "--seedSearchLmax 10 "
-    "--outFilterMultimapNmax 255 "
-    "--outFilterMismatchNmax 2 "
-    "--outFilterMultimapScoreRange 0 "
-    "--alignIntronMax 1 "
-    "--alignEndsType Extend5pOfRead1 "
-    "--outMultimapperOrder Random "
-    "--runRNGseed 777"
-)
-
-
-# star_contaminant's alignment settings. contaminant_compete_align realigns
-# with the same ones the reads whose one reported contaminant alignment
-# (star_contaminant: --outSAMmultNmax 1) is antisense, for their best sense
-# contaminant AS.
-CONTAMINANT_STAR_ARGS = (
-    "--outFilterMultimapNmax 10000 "
-    "--alignIntronMax 1 "
-    "--alignEndsType Extend5pOfRead1"
-)
 
 
 # bowtie_align: forward strand only (stranded libraries), end to end with at
