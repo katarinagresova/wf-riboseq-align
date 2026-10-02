@@ -88,6 +88,7 @@ rule star_contaminant:
     params:
         prefix=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_",
         tmp_dir=f"{EXP_DIR}/filter_reads/{{sample}}/_tmpSTAR",
+        star_args=CONTAMINANT_STAR_ARGS,
     conda:
         "../envs/star.yaml"
     threads: 8
@@ -102,10 +103,8 @@ rule star_contaminant:
             --runThreadN {threads} \
             --readFilesCommand zcat \
             --outMultimapperOrder Random \
-            --outFilterMultimapNmax 10000 \
             --outSAMmultNmax 1 \
-            --alignIntronMax 1 \
-            --alignEndsType Extend5pOfRead1 \
+            {params.star_args} \
             --outTmpDir {params.tmp_dir} \
             --genomeLoad NoSharedMemory \
             --outSAMattributes NH HI AS NM MD \
@@ -127,21 +126,30 @@ rule star_contaminant:
 
 # The competitive filter: of the reads star_contaminant aligned, put back the
 # ones whose best sense alignment to the transcriptome scores higher than their
-# contaminant alignment (scripts/contaminant_compete.py). The transcriptome STAR
-# call uses star_transcript's settings (RIBO_TRANSCRIPTOME_STAR_ARGS,
-# common.smk), plus the AS attribute.
+# best sense contaminant alignment (scripts/contaminant_compete.py). The
+# transcriptome STAR call uses star_transcript's settings
+# (RIBO_TRANSCRIPTOME_STAR_ARGS, common.smk), plus the AS attribute.
+# star_contaminant reported one of a read's best contaminant alignments, in
+# either orientation. Where it is antisense, the read is aligned to the
+# contaminants again with star_contaminant's settings (CONTAMINANT_STAR_ARGS),
+# keeping all its alignments, for the best sense one whatever its score: under
+# STAR's default --outFilterMultimapScoreRange of 1, a sense alignment more than
+# 1 below the antisense one would not be reported.
 rule contaminant_compete_align:
     input:
         bam=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Aligned.out.bam",
+        contaminant_index=f"{RESULTS_DIR}/star_index/contaminants",
         transcriptome_index=f"{RESULTS_DIR}/star_index/transcriptome",
     output:
         removed=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz"),
         contaminant=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz"),
+        contaminant_sense=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/contaminant_sense.tsv.gz"),
         transcriptome=temp(f"{EXP_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz"),
         log_final=f"{EXP_DIR}/filter_reads/{{sample}}/compete/{{sample}}.transcriptome_Log.final.out",
     # the sample in STAR's file names: MultiQC names a STAR report after its file
     params:
         prefix=f"{EXP_DIR}/filter_reads/{{sample}}/compete/{{sample}}.",
+        contaminant_star_args=CONTAMINANT_STAR_ARGS,
         star_args=RIBO_TRANSCRIPTOME_STAR_ARGS,
     log:
         f"{EXP_LOG_DIR}/contaminant_compete/{{sample}}.align.log",
@@ -153,12 +161,44 @@ rule contaminant_compete_align:
     shell:
         r"""
         exec > {log} 2>&1
-        rm -rf {params.prefix}transcriptome_tmpSTAR
+        rm -rf {params.prefix}contaminant_tmpSTAR {params.prefix}transcriptome_tmpSTAR
         samtools fastq {input.bam} | gzip > {output.removed}
-        # read, contaminant record, AS
+        # read, flag, contaminant record, AS
         samtools view {input.bam} |
-            awk -F'\t' -v OFS='\t' '{{for (i = 12; i <= NF; i++) if ($i ~ /^AS:i:/) print $1, $3, substr($i, 6)}}' |
+            awk -F'\t' -v OFS='\t' '{{for (i = 12; i <= NF; i++) if ($i ~ /^AS:i:/) print $1, $2, $3, substr($i, 6)}}' |
             gzip > {output.contaminant}
+
+        # all contaminant alignments of the reads whose reported one is antisense
+        samtools fastq -f 16 {input.bam} | gzip > {params.prefix}antisense.fastq.gz
+        STAR \
+            --runThreadN {threads} \
+            --genomeDir {input.contaminant_index} \
+            --outTmpDir {params.prefix}contaminant_tmpSTAR \
+            --outSAMtype BAM Unsorted \
+            --outSAMmode NoQS \
+            --outSAMattributes AS \
+            {params.contaminant_star_args} \
+            --outSAMmultNmax -1 \
+            --outFilterMultimapScoreRange 1000 \
+            --outFileNamePrefix {params.prefix}contaminant_ \
+            --readFilesIn {params.prefix}antisense.fastq.gz \
+            --readFilesCommand zcat
+        cat {params.prefix}contaminant_Log.final.out
+        antisense=$(samtools view -c -f 16 {input.bam})
+        aligned=$(awk -F'|' '/Uniquely mapped reads number|Number of reads mapped to multiple loci/ {{n += $2}}
+            END {{print n + 0}}' {params.prefix}contaminant_Log.final.out)
+        if [ "$aligned" != "$antisense" ]; then
+            echo "ERROR: $aligned of the $antisense reads with an antisense contaminant alignment aligned again" >&2
+            exit 1
+        fi
+        # read, AS of each sense alignment
+        samtools view -F 16 {params.prefix}contaminant_Aligned.out.bam |
+            awk -F'\t' -v OFS='\t' '{{for (i = 12; i <= NF; i++) if ($i ~ /^AS:i:/) print $1, substr($i, 6)}}' |
+            gzip > {output.contaminant_sense}
+        # also so that MultiQC does not take its Log.final.out for a second report of the sample (path */compete/*)
+        rm -f {params.prefix}antisense.fastq.gz {params.prefix}contaminant_Aligned.out.bam \
+            {params.prefix}contaminant_Log.final.out {params.prefix}contaminant_Log.out \
+            {params.prefix}contaminant_Log.progress.out {params.prefix}contaminant_SJ.out.tab
 
         # star_transcript's alignment of those reads
         STAR \
@@ -186,6 +226,7 @@ rule contaminant_compete:
         contam_log=f"{EXP_DIR}/filter_reads/{{sample}}/{{sample}}.contam_Log.final.out",
         removed=f"{EXP_DIR}/filter_reads/{{sample}}/compete/removed.fastq.gz",
         contaminant=f"{EXP_DIR}/filter_reads/{{sample}}/compete/contaminant.tsv.gz",
+        contaminant_sense=f"{EXP_DIR}/filter_reads/{{sample}}/compete/contaminant_sense.tsv.gz",
         transcriptome=f"{EXP_DIR}/filter_reads/{{sample}}/compete/transcriptome.tsv.gz",
         script=workflow.source_path("../scripts/contaminant_compete.py"),
     output:
@@ -200,4 +241,4 @@ rule contaminant_compete:
         mem_mb=16000,
     shell:
         "python {input.script} {input.clean} {input.contam_log} {input.removed} {input.contaminant} "
-        "{input.transcriptome} {output.fastq} {output.stats} {output.records} 2> {log}"
+        "{input.contaminant_sense} {input.transcriptome} {output.fastq} {output.stats} {output.records} 2> {log}"

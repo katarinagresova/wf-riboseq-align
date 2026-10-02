@@ -8,11 +8,14 @@ Everything is random sequence, not real data, sized to run the whole workflow in
                         to both species: in neither BAM, counted as both_species)
   contaminants.fa       rRNA / tRNA-like records, plus: a stretch of rRNA that is also inside a human transcript
                         (its reads tie: stay removed),
-                        a copy of a human stretch with a mismatch every 12 nt (its reads are rescued), and a
-                        stretch of rRNA as its own record (its reads align to both: contaminant_multi)
+                        a copy of a human stretch with a mismatch every 12 nt (its reads are rescued), a
+                        stretch of rRNA as its own record (its reads align to both: contaminant_multi), the
+                        reverse complement of a HTX015.1 stretch (its reads align to it antisense only: put back,
+                        rescued_by_strand) and the reverse complement of the tie stretch (its reads align to rRNA
+                        sense too: still a tie whichever STAR reports, antisense_picks_with_sense)
   ribo_{a,b}.fastq.gz   single-end 51 nt: 4 nt randomer + insert + 4 nt randomer + adapter, with PCR duplicates,
                         too-short inserts and adapter dimers. At the end: reads antisense to a human transcript
-                        (keep_sense drops them) and reads on the HTX011.1 stretch
+                        (keep_sense drops them), reads on the HTX011.1 stretch and reads on the HTX015.1 stretch
   rna_{a,b}_R{1,2}.fastq.gz  paired-end 2x75 nt, stranded (R1 antisense), none on 4 genes. Only for samples.csv's
                         read_type=rna rows, which the workflow skips; they share the Ribo-seq reads' random stream,
                         so dropping them would change those
@@ -27,6 +30,8 @@ rng = random.Random(1)
 # the antisense cases (HTX021.1 and the reads at the end of ribo_*) have their own stream, so adding them left
 # every other read and record unchanged
 antisense_rng = random.Random(2)
+# so do the reads on the HTX015.1 stretch, for the competitive filter's strand rule
+strand_rng = random.Random(3)
 
 
 def rseq(n, r=rng):
@@ -144,6 +149,23 @@ def antisense_reads(human, n_molecules, first):
     return reads
 
 
+def strand_contaminants(human, contaminants):
+    # antisense to a human stretch (no sense contaminant alignment), and antisense to the tie stretch (which rRNA_28S
+    # holds sense). Not in references(): ribo_reads draws its contaminant reads from that dict
+    return {"snoRNA_antisense_HTX015": revcomp(human["HTX015.1"][100:200]),
+            "rRNA_28S_antisense": revcomp(contaminants["rRNA_28S"][1000:1100])}
+
+
+def strand_reads(human, n_molecules, first):
+    # on the HTX015.1 stretch that snoRNA_antisense_HTX015 holds antisense
+    r = strand_rng
+    reads = []
+    for i in range(n_molecules):
+        insert = insert_from(human["HTX015.1"][100:200], r=r)
+        reads.append((f"r{first + i}", (rseq(4, r) + insert + rseq(4, r) + ADAPTER + rseq(20, r))[:51]))
+    return reads
+
+
 def rna_reads(human, n_pairs, silent):
     tx_names = [t for t in human if t.split(".")[0] not in silent]
     weights = [rng.lognormvariate(0, 1) for _ in tx_names]
@@ -165,12 +187,14 @@ def main():
     write_fasta(f"{OUT}/yeast.fa", yeast)
     # without tRNA_1_copy, which only doubles tRNA_1's share of the contaminant reads (it was a duplicate record for
     # number_contaminants to drop; contaminants_fa now goes to STAR as is)
-    write_fasta(f"{OUT}/contaminants.fa", {n: s for n, s in contaminants.items() if n != "tRNA_1_copy"})
+    write_fasta(f"{OUT}/contaminants.fa", {**{n: s for n, s in contaminants.items() if n != "tRNA_1_copy"},
+                                          **strand_contaminants(human, contaminants)})
 
     silent = {"HTX005", "HTX009", "HTX013", "HTX017"}  # single-isoform genes without RNA-seq reads
     for lib in "ab":
         ribo = ribo_reads(human, yeast, contaminants, 1500)
-        write_fastq(f"{OUT}/ribo_{lib}.fastq.gz", ribo + antisense_reads(human, 60, len(ribo)))
+        ribo += antisense_reads(human, 60, len(ribo))
+        write_fastq(f"{OUT}/ribo_{lib}.fastq.gz", ribo + strand_reads(human, 30, len(ribo)))
         r1, r2 = rna_reads(human, 2000, silent)
         write_fastq(f"{OUT}/rna_{lib}_R1.fastq.gz", r1)
         write_fastq(f"{OUT}/rna_{lib}_R2.fastq.gz", r2)

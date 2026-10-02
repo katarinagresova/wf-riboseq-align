@@ -86,3 +86,14 @@ RIBO_TRANSCRIPTOME_STAR_ARGS = (
     "--outMultimapperOrder Random "
     "--runRNGseed 777"
 )
+
+
+# star_contaminant's alignment settings. contaminant_compete_align realigns
+# with the same ones the reads whose one reported contaminant alignment
+# (star_contaminant: --outSAMmultNmax 1) is antisense, for their best sense
+# contaminant AS.
+CONTAMINANT_STAR_ARGS = (
+    "--outFilterMultimapNmax 10000 "
+    "--alignIntronMax 1 "
+    "--alignEndsType Extend5pOfRead1"
+)

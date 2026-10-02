@@ -64,8 +64,10 @@ Ribo-seq (single-end, with 4+4 nt randomers around the insert):
 3. `trim_reads`: strip the randomers and append them to the read name
 4. `star_contaminant`: discard reads that map to rRNA / tRNA / other contaminants. `contaminant_compete_align` +
    `contaminant_compete` then put back every discarded read whose best sense alignment to the transcriptome (step 5's
-   index and parameters) scores higher (STAR AS) than its contaminant alignment. A tie stays discarded (see
-   Differences below)
+   index and parameters) scores higher (STAR AS) than its best sense contaminant alignment, or that has no sense
+   contaminant alignment. Antisense alignments don't count on either side: the libraries are stranded, and the
+   contaminants are RNA in their own orientation, so a read antisense to one does not come from it. A tie stays
+   discarded (see Differences below)
 5. `star_transcript`: map to the human + spike-in transcriptome (multimappers kept, up to 255 loci)
 6. `keep_sense`: drop the antisense alignments. The libraries are stranded, so a footprint aligns to its transcript
    in sense, and STAR cannot be told to align to one strand only. A read with only antisense alignments is dropped;
@@ -158,8 +160,9 @@ Both wrappers activate the `snake` conda env. To use your own config: `./snakema
 
 `.test/` holds a tiny synthetic dataset: random sequences written by `.test/make_data.py`, not real reads. It is
 built so that every step has something to do: PCR duplicates, adapter dimers, contaminant reads, reads on two
-contaminants, reads that tie with or beat their contaminant alignment, reads aligned to both species, antisense reads,
-two experiments, and `rna` rows (skipped). The whole workflow runs on it in a few minutes:
+contaminants, reads that tie with or beat their contaminant alignment, reads antisense to a contaminant, reads aligned
+to both species, antisense reads, two experiments, and `rna` rows (skipped). The whole workflow runs on it in a few
+minutes:
 
 ```bash
 snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
@@ -167,7 +170,9 @@ snakemake -s workflow/Snakefile --directory .test --use-conda --cores 2
 
 CI ([.github/workflows/test.yaml](.github/workflows/test.yaml)) runs lint, a dry run and this run on every push to
 `main` and on pull requests, and fails if `qc/summary.tsv` has no multi-contaminant or both-species reads, or if
-`keep_sense` dropped no antisense-only read or moved no primary.
+`keep_sense` dropped no antisense-only read or moved no primary, or if the competitive filter put back no read
+because its contaminant alignment was antisense, or found no sense contaminant alignment behind a reported antisense
+one.
 
 ## Use it from another workflow
 

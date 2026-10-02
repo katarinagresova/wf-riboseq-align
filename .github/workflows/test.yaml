@@ -39,3 +39,9 @@ jobs:
           awk -F'\t' '{n[FILENAME, $1] = $2; files[FILENAME]}
           END {for (f in files) if (!n[f, "reads_dropped"] || !n[f, "primary_moved"]) {print f ": none"; bad = 1};
           exit bad}' .test/logs/*/align/keep_sense/*.log
+      # the HTX015.1 reads (antisense to a contaminant only) and the tie reads (antisense to one, sense to another)
+      - name: Check that the competitive filter put back reads by strand and found sense hits behind antisense ones
+        run: >-
+          awk -F'\t' 'FILENAME ~ /\.align\.log$/ {next} {n[FILENAME, $1] = $2; files[FILENAME]}
+          END {for (f in files) if (!n[f, "rescued_by_strand"] || !n[f, "antisense_picks_with_sense"]) {
+          print f ": none"; bad = 1}; exit bad}' .test/logs/*/contaminant_compete/*.log
