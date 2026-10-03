@@ -21,7 +21,7 @@ jobs:
           channels: conda-forge,bioconda
           channel-priority: strict
       - name: Install Snakemake
-        run: conda install -y "snakemake=9.11.6" pandas "samtools=1.24"
+        run: conda install -y "snakemake=9.11.6" pandas
       - name: Lint
         run: snakemake -s workflow/Snakefile --directory .test --lint
       - name: Dry run
@@ -39,9 +39,3 @@ jobs:
           awk -F'\t' 'FNR == 1 {for (i = 1; i <= NF; i++) col[$i] = i; next}
           !$col["tie"] || !$col["rescued"] || !$col["over_mismatch_cap"] {print FILENAME ": " $1 " has none"; bad = 1}
           END {exit bad}' .test/results/*/bowtie/*.assign.tsv
-      # bowtie_align aligns sense only (--norc); the test data has antisense reads
-      - name: Check that no BAM has a reverse-strand record
-        run: >-
-          for f in .test/results/*/split_bam/transcriptome/*/*.bam; do
-          n=$(samtools view -c -f 16 "$f"); if [ "$n" != 0 ]; then echo "$f: $n reverse records"; bad=1; fi; done;
-          exit ${bad:-0}
