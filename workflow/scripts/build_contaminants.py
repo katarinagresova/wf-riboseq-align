@@ -113,7 +113,7 @@ def main():
     records += ensembl_ncrna(YEAST_NCRNA_URL, "yeast")
     records += LITERAL_SEQUENCES.items()
 
-    # bowtie needs unique reference names (gene symbols repeat: 839 human_Y_RNA), and
+    # bowtie needs unique reference names (gene symbols repeat), and
     # identical sequences would only split reads between the copies: keep the first
     # record of each sequence (one strand: a reverse-complement copy stays) and
     # prefix its name with a running number; 80-column fasta.

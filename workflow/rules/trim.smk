@@ -41,7 +41,7 @@ rule collapse_reads:
         f"{EXP_LOG_DIR}/collapse_reads/{{sample}}.log",
     conda:
         "../envs/pysam.yaml"
-    # holds every distinct read in memory: 4.2 GB peak on 41M reads
+    # holds every distinct read in memory
     resources:
         mem_mb=16000,
     shell:

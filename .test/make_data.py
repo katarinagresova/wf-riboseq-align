@@ -15,7 +15,8 @@ Everything is random sequence, not real data, sized to run the whole workflow in
                         rRNA_28S only)
   ribo_{a,b}.fastq.gz   single-end 51 nt: 4 nt randomer + insert + 4 nt randomer + adapter, with PCR duplicates,
                         too-short inserts and adapter dimers. At the end: reads antisense to a human transcript
-                        (unaligned), reads on the HTX011.1 stretch and reads on the HTX015.1 stretch
+                        (unaligned), reads on the HTX011.1 stretch, reads on the HTX015.1 stretch and 20-22 nt
+                        reads with 2 mismatches to a human transcript (over the short-read mismatch cap)
   rna_{a,b}_R{1,2}.fastq.gz  paired-end 2x75 nt, stranded (R1 antisense), none on 4 genes. Only for samples.csv's
                         read_type=rna rows, which the workflow skips; they share the Ribo-seq reads' random stream,
                         so dropping them would change those
@@ -32,6 +33,8 @@ rng = random.Random(1)
 antisense_rng = random.Random(2)
 # so do the reads on the HTX015.1 stretch, for the competitive filter's strand rule
 strand_rng = random.Random(3)
+# and the short reads over the mismatch cap
+cap_rng = random.Random(4)
 
 
 def rseq(n, r=rng):
@@ -166,6 +169,20 @@ def strand_reads(human, n_molecules, first):
     return reads
 
 
+def over_cap_reads(human, n_molecules, first):
+    # 20-22 nt with 2 mismatches to a human transcript: below SHORT_READ_LENGTH, 1 mismatch at most
+    r = cap_rng
+    tx_names = list(human)
+    reads = []
+    for i in range(n_molecules):
+        insert = list(insert_from(human[r.choice(tx_names)], 20, 22, r=r))
+        for p in (6, 13):
+            insert[p] = {"A": "C", "C": "G", "G": "T", "T": "A"}[insert[p]]
+        insert = "".join(insert)
+        reads.append((f"r{first + i}", (rseq(4, r) + insert + rseq(4, r) + ADAPTER + rseq(20, r))[:51]))
+    return reads
+
+
 def rna_reads(human, n_pairs, silent):
     tx_names = [t for t in human if t.split(".")[0] not in silent]
     weights = [rng.lognormvariate(0, 1) for _ in tx_names]
@@ -194,7 +211,8 @@ def main():
     for lib in "ab":
         ribo = ribo_reads(human, yeast, contaminants, 1500)
         ribo += antisense_reads(human, 60, len(ribo))
-        write_fastq(f"{OUT}/ribo_{lib}.fastq.gz", ribo + strand_reads(human, 30, len(ribo)))
+        ribo += strand_reads(human, 30, len(ribo))
+        write_fastq(f"{OUT}/ribo_{lib}.fastq.gz", ribo + over_cap_reads(human, 30, len(ribo)))
         r1, r2 = rna_reads(human, 2000, silent)
         write_fastq(f"{OUT}/rna_{lib}_R1.fastq.gz", r1)
         write_fastq(f"{OUT}/rna_{lib}_R2.fastq.gz", r2)

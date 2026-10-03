@@ -67,7 +67,7 @@ def experiment_files(pattern, experiment, read_type, **wildcards):
 # 255 loci: assign_reads.py drops the read as too_many_loci.
 BOWTIE_ARGS = "-v 2 --norc -k 256 --best --reorder"
 # A read shorter than SHORT_READ_LENGTH keeps only its alignments with at most
-# SHORT_READ_MISMATCHES mismatches. 2 = no cap, until it is chosen
-# (PLAN_BOWTIE.md V3).
+# SHORT_READ_MISMATCHES mismatches: short reads with more are mostly spurious
+# hits (not periodic, piling up at single positions).
 SHORT_READ_LENGTH = 23
-SHORT_READ_MISMATCHES = 2
+SHORT_READ_MISMATCHES = 1

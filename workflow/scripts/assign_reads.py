@@ -18,8 +18,8 @@ fewest mismatches left) decides:
 
 The first three and the contaminant classes are dropped; a tie stays dropped: its sequence lies in both
 references, and most ties are rRNA, snoRNA or 7SL sequence inside transcriptome entries that pile up in
-CDSs (tested with STAR on eIF4E 4h ribo_07, see CLAUDE.md). A read with 256 alignments may have more
-that bowtie did not report: its class is from the reported ones.
+CDSs. A read with 256 alignments may have more that bowtie did not report: its class is from the reported
+ones.
 
 A kept read goes to the BAM with its best-stratum alignments only, NH = their number, MAPQ = STAR's
 value for that (255 for 1, 3 for 2, 1 for 3-4, 0 for more), and one primary, picked by the CRC32 of
