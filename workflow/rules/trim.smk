@@ -1,5 +1,5 @@
 # Ribo-seq read pre-processing: adapter trim -> UMI-aware collapse -> strip the
-# 4+4 nt randomers.
+# randomers (config randomer_5p + randomer_3p nt, default 4 + 4).
 
 
 rule cutadapt_reads:
@@ -14,9 +14,9 @@ rule cutadapt_reads:
     params:
         adapter=config["adapter"],
         # minlength / maxlength are of the insert: the read still has its
-        # 4+4 nt randomers here (trim_reads strips them)
-        minlength=config["minlength"] + 8,
-        maxlength=config["maxlength"] + 8,
+        # randomers here (trim_reads strips them)
+        minlength=config["minlength"] + config["randomer_5p"] + config["randomer_3p"],
+        maxlength=config["maxlength"] + config["randomer_5p"] + config["randomer_3p"],
         qualcutoff=config["qualcutoff"],
     conda:
         "../envs/cutadapt.yaml"
@@ -55,12 +55,15 @@ rule trim_reads:
         f"{EXP_DIR}/trim_reads/{{sample}}.fastq.gz",
     log:
         f"{EXP_LOG_DIR}/trim_reads/{{sample}}.log",
+    params:
+        randomer_5p=config["randomer_5p"],
+        randomer_3p=config["randomer_3p"],
     conda:
         "../envs/cutadapt.yaml"
     threads: 4
     shell:
-        # Cut the 4 nt randomer off both ends of each read and keep both in
-        # the read name, e.g. read "r" starting with ACCG and ending with TATA
-        # becomes "r_ACCG:TATA".
-        "cutadapt --cores {threads} -u 4 -u -4 "
+        # Cut the randomers off both ends of each read and keep both in the
+        # read name, e.g. (4 + 4) read "r" starting with ACCG and ending with
+        # TATA becomes "r_ACCG:TATA".
+        "cutadapt --cores {threads} -u {params.randomer_5p} -u -{params.randomer_3p} "
         "--rename '{{header}}_{{cut_prefix}}:{{cut_suffix}}' -o {output} {input} > {log} 2>&1"

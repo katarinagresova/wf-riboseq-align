@@ -22,6 +22,14 @@ properties:
   qualcutoff:
     type: integer
     minimum: 0
+  randomer_5p:
+    type: integer
+    minimum: 0
+    default: 4
+  randomer_3p:
+    type: integer
+    minimum: 0
+    default: 4
   contaminants_fa:
     type: string
   human_transcriptome_fa:

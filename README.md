@@ -56,7 +56,7 @@ The bold input is the fastqs in `samples.csv`, the grey ones the references in `
 of rules, rounded boxes the main outputs (see Outputs). Not shown: FastQC and MultiQC, which report on the fastqs
 and every step's log.
 
-Ribo-seq (single-end, with 4+4 nt randomers around the insert):
+Ribo-seq (single-end, with randomers around the insert: `randomer_5p` + `randomer_3p` nt, default 4 + 4):
 
 1. `cutadapt_reads`: trim the 3' adapter, keeping reads whose insert (the read without its randomers) is 18–100 nt
    (`minlength`, `maxlength`)
